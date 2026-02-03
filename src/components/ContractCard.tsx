@@ -12,7 +12,7 @@ const ContractCard = ({ title, route }: ContractCardProps) => {
   return (
     <div
       onClick={() => navigate(route)}
-      className="contract-card animate-fade-in"
+      className="contract-card group animate-fade-in"
     >
       <div className="flex flex-col items-center text-center">
         <div className="icon-circle mb-6">

@@ -104,7 +104,7 @@
   .contract-card {
     @apply bg-card border border-border rounded-xl p-6 
            hover:border-primary/50 transition-all duration-300
-           cursor-pointer group;
+           cursor-pointer;
   }
 
   .form-panel {
