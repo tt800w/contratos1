@@ -1,105 +1,55 @@
 import { useState } from "react";
 import Header from "@/components/Header";
-import FormInput from "@/components/FormInput";
-import FormSection from "@/components/FormSection";
+import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
-import { Save } from "lucide-react";
+import { Upload } from "lucide-react";
+
+// Mock users data - replace with real data from your backend
+const mockUsers = [
+  { id: "1", name: "Carlos Ruiz Méndez (Representante: Juan Pérez García)" },
+  { id: "2", name: "Isabella Torres (Representante: María Torres)" },
+  { id: "3", name: "Santiago Gómez (Representante: Pedro Gómez)" },
+];
 
 const RP56Menores = () => {
-  const [formData, setFormData] = useState({
-    // Representante
-    nombreRepresentante: "",
-    cedulaRepresentante: "",
-    correoRepresentante: "",
-    ciudadRepresentante: "",
-    celularRepresentante: "",
-    // Camper
-    nombreCamper: "",
-    documentoCamper: "",
-    correoCamper: "",
-  });
+  const [selectedUser, setSelectedUser] = useState("");
 
-  const updateField = (field: string) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack subtitle="RP 56 MENORES" />
+      <Header showBack />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-65px)]">
         {/* Form Panel */}
-        <div className="w-[400px] form-panel border-r border-border overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              RP 56 Menores
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Complete la información del representante y del camper para generar el contrato estandarizado.
-            </p>
-          </div>
+        <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                RP 56 Menores de edad
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Seleccione el perfil para cargar la información en el documento.
+              </p>
+            </div>
 
-          <div className="space-y-8">
-            <FormSection number="01" title="Representante">
-              <FormInput
-                label="NOMBRE COMPLETO DEL REPRESENTANTE"
-                placeholder="Ej. Juan Pérez García"
-                value={formData.nombreRepresentante}
-                onChange={updateField("nombreRepresentante")}
-              />
-              <FormInput
-                label="CÉDULA DEL REPRESENTANTE"
-                placeholder="Ej. 1.098.765.432"
-                value={formData.cedulaRepresentante}
-                onChange={updateField("cedulaRepresentante")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO DEL REPRESENTANTE"
-                placeholder="Ej. representante@email.com"
-                value={formData.correoRepresentante}
-                onChange={updateField("correoRepresentante")}
-                type="email"
-              />
-              <FormInput
-                label="CIUDAD DE RESIDENCIA"
-                placeholder="Ej. Bucaramanga"
-                value={formData.ciudadRepresentante}
-                onChange={updateField("ciudadRepresentante")}
-              />
-              <FormInput
-                label="NÚMERO DE CELULAR"
-                placeholder="Ej. 312 345 6789"
-                value={formData.celularRepresentante}
-                onChange={updateField("celularRepresentante")}
-              />
-            </FormSection>
-
-            <FormSection number="02" title="Camper">
-              <FormInput
-                label="NOMBRE COMPLETO DEL CAMPER"
-                placeholder="Ej. Carlos Ruiz Méndez"
-                value={formData.nombreCamper}
-                onChange={updateField("nombreCamper")}
-              />
-              <FormInput
-                label="NÚMERO DE DOCUMENTO DEL CAMPER"
-                placeholder="Ej. 1.005.123.456"
-                value={formData.documentoCamper}
-                onChange={updateField("documentoCamper")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO DEL CAMPER"
-                placeholder="Ej. camper@email.com"
-                value={formData.correoCamper}
-                onChange={updateField("correoCamper")}
-                type="email"
-              />
-            </FormSection>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                </label>
+                <UserSelector
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  users={mockUsers}
+                />
+              </div>
+            </div>
           </div>
 
           <button className="primary-button mt-8">
-            <Save className="w-5 h-5" />
-            <span>GUARDAR INFORMACIÓN</span>
+            <Upload className="w-5 h-5" />
+            <span>SUBIR INFORMACIÓN</span>
           </button>
         </div>
 
@@ -121,6 +71,23 @@ const RP56Menores = () => {
               de recursos propios para estratos 5 y 6. El representante legal asume la responsabilidad total 
               de las obligaciones aquí descritas para el beneficio del Camper vinculado al programa.
             </p>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="bg-document-foreground text-white text-xs px-2 py-1 rounded">01</span>
+                <h3 className="font-bold text-sm">IDENTIFICACIÓN DE LAS PARTES</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="text-muted-foreground mb-1">CAMPER</p>
+                  <p className="text-primary">{selectedUserData?.name.split(" (")[0] || "Nombre del camper..."}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">REPRESENTANTE LEGAL</p>
+                  <p className="text-primary">{selectedUserData?.name.match(/\(Representante: (.+)\)/)?.[1] || "Nombre del representante..."}</p>
+                </div>
+              </div>
+            </div>
 
             <div>
               <h3 className="font-bold text-sm mb-2">I. OBJETO DEL ACUERDO</h3>

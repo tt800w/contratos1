@@ -1,87 +1,63 @@
 import { useState } from "react";
 import Header from "@/components/Header";
-import FormInput from "@/components/FormInput";
+import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
-import { Save } from "lucide-react";
+import { Upload } from "lucide-react";
+
+// Mock users data - replace with real data from your backend
+const mockUsers = [
+  { id: "1", name: "Daniel Alejandro Rodríguez" },
+  { id: "2", name: "Laura Patricia Gómez" },
+  { id: "3", name: "Sebastián Ruiz Méndez" },
+];
 
 const RP123Mayores = () => {
-  const [formData, setFormData] = useState({
-    nombreCamper: "",
-    cedula: "",
-    direccion: "",
-    correo: "",
-    celular: "",
-    ciudad: "",
-  });
+  const [selectedUser, setSelectedUser] = useState("");
 
-  const updateField = (field: string) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack subtitle="RP 123 MAYORES" />
+      <Header showBack />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-65px)]">
         {/* Form Panel */}
-        <div className="w-[400px] form-panel border-r border-border overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              RECURSOS PROPIOS ESTRATOS 1,2,3 MAYORES DE EDAD
-            </h2>
-          </div>
+        <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                RP 123 Mayores de edad
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Seleccione el perfil para cargar la información en el documento.
+              </p>
+            </div>
 
-          <div className="space-y-4">
-            <FormInput
-              label="NOMBRE COMPLETO DEL CAMPER"
-              placeholder="Daniel Alejandro Rodríguez"
-              value={formData.nombreCamper}
-              onChange={updateField("nombreCamper")}
-            />
-            <FormInput
-              label="NÚMERO DE CÉDULA"
-              placeholder="1.098.765.432"
-              value={formData.cedula}
-              onChange={updateField("cedula")}
-            />
-            <FormInput
-              label="DIRECCIÓN DE RESIDENCIA"
-              placeholder="Calle 200 # 12-34"
-              value={formData.direccion}
-              onChange={updateField("direccion")}
-            />
-            <FormInput
-              label="CORREO ELECTRÓNICO"
-              placeholder="daniel.rodriguez@gmail.com"
-              value={formData.correo}
-              onChange={updateField("correo")}
-              type="email"
-            />
-            <FormInput
-              label="NÚMERO DE CELULAR"
-              placeholder="315 123 4567"
-              value={formData.celular}
-              onChange={updateField("celular")}
-            />
-            <FormInput
-              label="CIUDAD DE RESIDENCIA"
-              placeholder="Bucaramanga"
-              value={formData.ciudad}
-              onChange={updateField("ciudad")}
-            />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                </label>
+                <UserSelector
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  users={mockUsers}
+                />
+              </div>
+            </div>
           </div>
 
           <button className="primary-button mt-8">
-            <Save className="w-5 h-5" />
-            <span>GUARDAR INFORMACIÓN</span>
+            <Upload className="w-5 h-5" />
+            <span>SUBIR INFORMACIÓN</span>
           </button>
         </div>
 
         {/* Document Preview */}
-        <DocumentPreview title="VISTA PREVIA EN TIEMPO REAL">
+        <DocumentPreview>
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-document-foreground mb-2">
-              RECURSOS PROPIOS ESTRATOS 1,2,3 MAYORES DE EDAD
+              RECURSOS PROPIOS ESTRATOS 1, 2, 3 MAYORES DE EDAD
             </h1>
             <div className="w-12 h-0.5 bg-document-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground tracking-wider">
@@ -93,14 +69,11 @@ const RP123Mayores = () => {
             <p className="text-justify">
               Por medio del presente documento, se formaliza el acuerdo de formación educativa entre{" "}
               <strong>CAMPUSLANDS</strong> y el beneficiario{" "}
-              <strong>{formData.nombreCamper || "[Nombre del estudiante]"}</strong>, identificado con 
-              cédula de ciudadanía <strong>{formData.cedula || "[Número de documento]"}</strong>.
+              <strong>{selectedUserData?.name || "[Nombre del estudiante]"}</strong>.
             </p>
 
             <p className="text-justify">
-              El beneficiario declara bajo la gravedad de juramento que reside en la ciudad de{" "}
-              <strong>{formData.ciudad || "[Ciudad]"}</strong>, en la dirección{" "}
-              <strong>{formData.direccion || "[Dirección]"}</strong>, y que pertenece a los estratos 
+              El beneficiario declara bajo la gravedad de juramento que pertenece a los estratos 
               socioeconómicos 1, 2 o 3, requisito indispensable para el acceso al programa de 
               formación financiado con recursos propios de la institución.
             </p>
@@ -123,15 +96,6 @@ const RP123Mayores = () => {
               </p>
             </div>
 
-            <div>
-              <h3 className="font-bold text-sm mb-2">CLÁUSULA TERCERA - COMUNICACIÓN:</h3>
-              <p className="text-justify">
-                Para efectos de notificaciones, el beneficiario autoriza el uso de su correo electrónico{" "}
-                <strong>{formData.correo || "[correo@ejemplo.com]"}</strong> y su número de contacto{" "}
-                <strong>{formData.celular || "[Número celular]"}</strong>.
-              </p>
-            </div>
-
             <div className="flex justify-between pt-12 mt-12 border-t border-gray-300">
               <div className="text-center">
                 <div className="w-40 border-t border-gray-400 pt-2">
@@ -142,7 +106,6 @@ const RP123Mayores = () => {
               <div className="text-center">
                 <div className="w-40 border-t border-gray-400 pt-2">
                   <p className="text-xs font-semibold">FIRMA DEL CAMPER</p>
-                  <p className="text-xs text-muted-foreground">C.C. {formData.cedula || "_____________"}</p>
                 </div>
               </div>
             </div>
