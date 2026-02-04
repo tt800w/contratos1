@@ -1,82 +1,55 @@
 import { useState } from "react";
 import Header from "@/components/Header";
-import FormInput from "@/components/FormInput";
+import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
-import { Save } from "lucide-react";
+import { Upload } from "lucide-react";
+
+// Mock users data - replace with real data from your backend
+const mockUsers = [
+  { id: "1", name: "Juan Pérez García" },
+  { id: "2", name: "María López Rodríguez" },
+  { id: "3", name: "Carlos Andrés Martínez" },
+];
 
 const LumniMayores = () => {
-  const [formData, setFormData] = useState({
-    nombreCamper: "",
-    cedula: "",
-    direccion: "",
-    correo: "",
-    celular: "",
-    ciudad: "",
-  });
+  const [selectedUser, setSelectedUser] = useState("");
 
-  const updateField = (field: string) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack subtitle="LUMNI MAYORES" />
+      <Header showBack />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-65px)]">
         {/* Form Panel */}
-        <div className="w-[400px] form-panel border-r border-border overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Lumni Mayores de edad
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Complete los campos para actualizar el documento en tiempo real.
-            </p>
-          </div>
+        <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Lumni Mayores de edad
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Seleccione el perfil para cargar la información en el documento.
+              </p>
+            </div>
 
-          <div className="space-y-4">
-            <FormInput
-              label="NOMBRE COMPLETO DEL CAMPER"
-              placeholder="Ej. Juan Pérez García"
-              value={formData.nombreCamper}
-              onChange={updateField("nombreCamper")}
-            />
-            <FormInput
-              label="NÚMERO DE CÉDULA"
-              placeholder="Ej. 1.098.765.432"
-              value={formData.cedula}
-              onChange={updateField("cedula")}
-            />
-            <FormInput
-              label="DIRECCIÓN DE RESIDENCIA"
-              placeholder="Ej. Calle 200 # 12-34"
-              value={formData.direccion}
-              onChange={updateField("direccion")}
-            />
-            <FormInput
-              label="CORREO ELECTRÓNICO"
-              placeholder="Ej. camper@campuslands.com"
-              value={formData.correo}
-              onChange={updateField("correo")}
-              type="email"
-            />
-            <FormInput
-              label="NÚMERO DE CELULAR"
-              placeholder="Ej. 312 345 6789"
-              value={formData.celular}
-              onChange={updateField("celular")}
-            />
-            <FormInput
-              label="CIUDAD DE RESIDENCIA"
-              placeholder="Ej. Bucaramanga"
-              value={formData.ciudad}
-              onChange={updateField("ciudad")}
-            />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                </label>
+                <UserSelector
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  users={mockUsers}
+                />
+              </div>
+            </div>
           </div>
 
           <button className="primary-button mt-8">
-            <Save className="w-5 h-5" />
-            <span>GUARDAR INFORMACIÓN</span>
+            <Upload className="w-5 h-5" />
+            <span>SUBIR INFORMACIÓN</span>
           </button>
         </div>
 
@@ -95,7 +68,7 @@ const LumniMayores = () => {
           <div className="text-sm leading-relaxed text-document-foreground space-y-6">
             <p className="text-justify">
               El presente acuerdo se celebra entre la institución educativa y el estudiante 
-              {formData.nombreCamper && <strong> {formData.nombreCamper}</strong>} arriba mencionado, 
+              {selectedUserData && <strong> {selectedUserData.name}</strong>} arriba mencionado, 
               bajo los términos del programa de financiación Lumni para mayores de edad. El Camper acepta 
               irrevocablemente las condiciones establecidas para su formación técnica y profesional.
             </p>

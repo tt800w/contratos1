@@ -1,105 +1,55 @@
 import { useState } from "react";
 import Header from "@/components/Header";
-import FormInput from "@/components/FormInput";
-import FormSection from "@/components/FormSection";
+import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
-import { Save } from "lucide-react";
+import { Upload } from "lucide-react";
+
+// Mock users data - replace with real data from your backend
+const mockUsers = [
+  { id: "1", name: "Juan David Rodríguez (Representante: Ana María Rodríguez)" },
+  { id: "2", name: "Sofía Martínez (Representante: Carlos Martínez)" },
+  { id: "3", name: "Miguel Ángel López (Representante: Laura López)" },
+];
 
 const RP123Menores = () => {
-  const [formData, setFormData] = useState({
-    // Representante
-    nombreRepresentante: "",
-    cedulaRepresentante: "",
-    correoRepresentante: "",
-    ciudadRepresentante: "",
-    celularRepresentante: "",
-    // Camper
-    nombreCamper: "",
-    documentoCamper: "",
-    correoCamper: "",
-  });
+  const [selectedUser, setSelectedUser] = useState("");
 
-  const updateField = (field: string) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack subtitle="RP 123 MENORES" />
+      <Header showBack />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-65px)]">
         {/* Form Panel */}
-        <div className="w-[400px] form-panel border-r border-border overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              RP 123 Menores
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              EDITOR DE CONTRATO ESTANDARIZADO
-            </p>
-          </div>
+        <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                RP 123 Menores de edad
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Seleccione el perfil para cargar la información en el documento.
+              </p>
+            </div>
 
-          <div className="space-y-8">
-            <FormSection number="01" title="Representante">
-              <FormInput
-                label="NOMBRE COMPLETO DEL REPRESENTANTE"
-                placeholder="Ana María Rodríguez"
-                value={formData.nombreRepresentante}
-                onChange={updateField("nombreRepresentante")}
-              />
-              <FormInput
-                label="CÉDULA DEL REPRESENTANTE"
-                placeholder="1.098.765.432"
-                value={formData.cedulaRepresentante}
-                onChange={updateField("cedulaRepresentante")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO"
-                placeholder="representante@campuslands.com"
-                value={formData.correoRepresentante}
-                onChange={updateField("correoRepresentante")}
-                type="email"
-              />
-              <FormInput
-                label="CIUDAD DE RESIDENCIA"
-                placeholder="Bucaramanga"
-                value={formData.ciudadRepresentante}
-                onChange={updateField("ciudadRepresentante")}
-              />
-              <FormInput
-                label="NÚMERO DE CELULAR"
-                placeholder="+57 312 345 6789"
-                value={formData.celularRepresentante}
-                onChange={updateField("celularRepresentante")}
-              />
-            </FormSection>
-
-            <FormSection number="02" title="Camper">
-              <FormInput
-                label="NOMBRE COMPLETO DEL CAMPER"
-                placeholder="Juan David Rodríguez"
-                value={formData.nombreCamper}
-                onChange={updateField("nombreCamper")}
-              />
-              <FormInput
-                label="NÚMERO DE DOCUMENTO"
-                placeholder="1.102.345.678"
-                value={formData.documentoCamper}
-                onChange={updateField("documentoCamper")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO DEL CAMPER"
-                placeholder="camper@campuslands.com"
-                value={formData.correoCamper}
-                onChange={updateField("correoCamper")}
-                type="email"
-              />
-            </FormSection>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                </label>
+                <UserSelector
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  users={mockUsers}
+                />
+              </div>
+            </div>
           </div>
 
           <button className="primary-button mt-8">
-            <Save className="w-5 h-5" />
-            <span>GUARDAR INFORMACIÓN</span>
+            <Upload className="w-5 h-5" />
+            <span>SUBIR INFORMACIÓN</span>
           </button>
         </div>
 
@@ -129,12 +79,12 @@ const RP123Menores = () => {
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
-                  <p className="text-muted-foreground mb-1">REPRESENTANTE LEGAL</p>
-                  <p className="text-primary">{formData.nombreRepresentante || "Nombre del representante..."}</p>
+                  <p className="text-muted-foreground mb-1">CAMPER</p>
+                  <p className="text-primary">{selectedUserData?.name.split(" (")[0] || "Nombre del camper..."}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground mb-1">IDENTIFICACIÓN CAMPER</p>
-                  <p className="text-primary">{formData.documentoCamper || "Documento del camper..."}</p>
+                  <p className="text-muted-foreground mb-1">REPRESENTANTE LEGAL</p>
+                  <p className="text-primary">{selectedUserData?.name.match(/\(Representante: (.+)\)/)?.[1] || "Nombre del representante..."}</p>
                 </div>
               </div>
             </div>
@@ -151,18 +101,6 @@ const RP123Menores = () => {
               </p>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="bg-document-foreground text-white text-xs px-2 py-1 rounded">03</span>
-                <h3 className="font-bold text-sm">COMPROMISOS FINANCIEROS</h3>
-              </div>
-              <p className="text-justify">
-                Se establece un plan de pagos preferencial basado en la clasificación socioeconómica 
-                reportada. El incumplimiento en las fechas pactadas podrá acarrear la suspensión temporal 
-                del acceso a los recursos educativos de la plataforma.
-              </p>
-            </div>
-
             <div className="flex justify-between pt-12 mt-12 border-t border-gray-300">
               <div className="text-center">
                 <div className="w-40 border-t border-gray-400 pt-2">
@@ -173,7 +111,6 @@ const RP123Menores = () => {
               <div className="text-center">
                 <div className="w-40 border-t border-gray-400 pt-2">
                   <p className="text-xs font-semibold tracking-wider italic text-muted-foreground">FIRMA REPRESENTANTE LEGAL</p>
-                  <p className="text-xs text-muted-foreground">CÉDULA DE CIUDADANÍA</p>
                 </div>
               </div>
             </div>

@@ -1,105 +1,55 @@
 import { useState } from "react";
 import Header from "@/components/Header";
-import FormInput from "@/components/FormInput";
-import FormSection from "@/components/FormSection";
+import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
-import { Save } from "lucide-react";
+import { Upload } from "lucide-react";
+
+// Mock users data - replace with real data from your backend
+const mockUsers = [
+  { id: "1", name: "Juan Pérez García (Representante: María García)" },
+  { id: "2", name: "Carlos López (Representante: Pedro López)" },
+  { id: "3", name: "Ana Martínez (Representante: Rosa Martínez)" },
+];
 
 const LumniMenores = () => {
-  const [formData, setFormData] = useState({
-    // Representante
-    nombreRepresentante: "",
-    cedulaRepresentante: "",
-    correoRepresentante: "",
-    ciudadRepresentante: "",
-    celularRepresentante: "",
-    // Camper
-    nombreCamper: "",
-    documentoCamper: "",
-    correoCamper: "",
-  });
+  const [selectedUser, setSelectedUser] = useState("");
 
-  const updateField = (field: string) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack subtitle="LUMNI MENORES" />
+      <Header showBack />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-65px)]">
         {/* Form Panel */}
-        <div className="w-[400px] form-panel border-r border-border overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Lumni Menores de edad
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Ingrese los datos para la automatización del documento.
-            </p>
-          </div>
+        <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Lumni Menores de edad
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Seleccione el perfil para cargar la información en el documento.
+              </p>
+            </div>
 
-          <div className="space-y-8">
-            <FormSection number="01" title="Representante">
-              <FormInput
-                label="NOMBRE COMPLETO DEL REPRESENTANTE"
-                placeholder="Nombre completo"
-                value={formData.nombreRepresentante}
-                onChange={updateField("nombreRepresentante")}
-              />
-              <FormInput
-                label="CÉDULA DEL REPRESENTANTE"
-                placeholder="Documento de identidad"
-                value={formData.cedulaRepresentante}
-                onChange={updateField("cedulaRepresentante")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO"
-                placeholder="correo@ejemplo.com"
-                value={formData.correoRepresentante}
-                onChange={updateField("correoRepresentante")}
-                type="email"
-              />
-              <FormInput
-                label="CIUDAD DE RESIDENCIA"
-                placeholder="Ej. Bucaramanga, Santander"
-                value={formData.ciudadRepresentante}
-                onChange={updateField("ciudadRepresentante")}
-              />
-              <FormInput
-                label="NÚMERO DE CELULAR"
-                placeholder="Ej. 315 876 5432"
-                value={formData.celularRepresentante}
-                onChange={updateField("celularRepresentante")}
-              />
-            </FormSection>
-
-            <FormSection number="02" title="Camper">
-              <FormInput
-                label="NOMBRE COMPLETO DEL CAMPER"
-                placeholder="Ej. Juan Andrés Ruiz"
-                value={formData.nombreCamper}
-                onChange={updateField("nombreCamper")}
-              />
-              <FormInput
-                label="NÚMERO DE DOCUMENTO DEL CAMPER"
-                placeholder="Ej. 1.098.765.432"
-                value={formData.documentoCamper}
-                onChange={updateField("documentoCamper")}
-              />
-              <FormInput
-                label="CORREO ELECTRÓNICO DEL CAMPER"
-                placeholder="Ej. camper@email.com"
-                value={formData.correoCamper}
-                onChange={updateField("correoCamper")}
-                type="email"
-              />
-            </FormSection>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                </label>
+                <UserSelector
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  users={mockUsers}
+                />
+              </div>
+            </div>
           </div>
 
           <button className="primary-button mt-8">
-            <Save className="w-5 h-5" />
-            <span>GUARDAR INFORMACIÓN</span>
+            <Upload className="w-5 h-5" />
+            <span>SUBIR INFORMACIÓN</span>
           </button>
         </div>
 
@@ -118,8 +68,7 @@ const LumniMenores = () => {
           <div className="text-sm leading-relaxed text-document-foreground space-y-6">
             <p className="text-justify">
               El presente acuerdo se celebra entre la institución educativa, el estudiante menor de edad 
-              {formData.nombreCamper && <strong> {formData.nombreCamper}</strong>} y su representante legal 
-              {formData.nombreRepresentante && <strong> {formData.nombreRepresentante}</strong>}, bajo los 
+              {selectedUserData && <strong> {selectedUserData.name.split(" (")[0]}</strong>} y su representante legal, bajo los 
               términos del programa de financiación Lumni para menores de edad.
             </p>
 

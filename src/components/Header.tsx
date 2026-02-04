@@ -19,7 +19,7 @@ const Header = ({ showBack = false, title, subtitle }: HeaderProps) => {
             className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium tracking-wide">TEMPLATES</span>
+            <span className="text-sm font-medium tracking-wide">REGRESAR</span>
           </button>
         ) : (
           <div className="flex items-center gap-3">
@@ -32,11 +32,6 @@ const Header = ({ showBack = false, title, subtitle }: HeaderProps) => {
 
         <div className="flex items-center gap-3">
           <Rocket className="w-5 h-5 text-primary" />
-          {subtitle && (
-            <span className="text-xs font-medium tracking-wider text-muted-foreground">
-              {subtitle}
-            </span>
-          )}
         </div>
 
         <div className="text-xs font-medium tracking-wider text-muted-foreground">
