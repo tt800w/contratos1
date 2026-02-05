@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
 import DocumentPreview from "@/components/DocumentPreview";
 import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Mock users data - replace with real data from your backend
 const mockUsers = [
@@ -67,17 +68,17 @@ const LumniMayores = () => {
 
           <div className="text-sm leading-relaxed text-document-foreground space-y-6">
             <p className="text-justify">
-              El presente acuerdo se celebra entre la institución educativa y el estudiante 
-              {selectedUserData && <strong> {selectedUserData.name}</strong>} arriba mencionado, 
-              bajo los términos del programa de financiación Lumni para mayores de edad. El Camper acepta 
+              El presente acuerdo se celebra entre la institución educativa y el estudiante
+              {selectedUserData && <strong> {selectedUserData.name}</strong>} arriba mencionado,
+              bajo los términos del programa de financiación Lumni para mayores de edad. El Camper acepta
               irrevocablemente las condiciones establecidas para su formación técnica y profesional.
             </p>
 
             <div>
               <h3 className="font-bold text-sm mb-2">I. OBJETO DEL CONTRATO</h3>
               <p className="text-justify">
-                El presente documento tiene como finalidad formalizar la vinculación del Camper al programa de 
-                formación avanzada, garantizando el cumplimiento de los estándares de calidad y compromiso 
+                El presente documento tiene como finalidad formalizar la vinculación del Camper al programa de
+                formación avanzada, garantizando el cumplimiento de los estándares de calidad y compromiso
                 exigidos por ambas partes en el marco del desarrollo de talento tecnológico.
               </p>
             </div>
@@ -85,8 +86,8 @@ const LumniMayores = () => {
             <div>
               <h3 className="font-bold text-sm mb-2">II. OBLIGACIONES Y COMPROMISOS</h3>
               <p className="text-justify">
-                El estudiante se compromete a asistir al 100% de las sesiones programadas, cumplir con los 
-                retos técnicos asignados y mantener un promedio de desempeño óptimo. Lumni proveerá el 
+                El estudiante se compromete a asistir al 100% de las sesiones programadas, cumplir con los
+                retos técnicos asignados y mantener un promedio de desempeño óptimo. Lumni proveerá el
                 soporte financiero detallado en los anexos técnicos adjuntos a este contrato.
               </p>
             </div>
