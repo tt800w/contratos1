@@ -1,20 +1,113 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
-import DocumentPreview from "@/components/DocumentPreview";
-import { Upload } from "lucide-react";
+import { Upload, FileDown, Mail, FileText } from "lucide-react";
+import DocxViewer from "@/components/DocxViewer";
+import { generateContract } from "@/utils/contractGenerator";
+import { toast } from "sonner";
 
 // Mock users data - replace with real data from your backend
 const mockUsers = [
-  { id: "1", name: "Carlos Ruiz Méndez (Representante: Juan Pérez García)" },
-  { id: "2", name: "Isabella Torres (Representante: María Torres)" },
-  { id: "3", name: "Santiago Gómez (Representante: Pedro Gómez)" },
+  {
+    id: "1",
+    name: "Carlos Ruiz Méndez",
+    representative: {
+      name: "Juan Pérez García",
+      cedula: "12345678",
+      email: "juan.perez@email.com",
+      phone: "3000000000"
+    }
+  },
+  {
+    id: "2",
+    name: "Isabella Torres",
+    representative: {
+      name: "María Torres",
+      cedula: "87654321",
+      email: "maria.torres@email.com",
+      phone: "3111111111"
+    }
+  },
+  {
+    id: "3",
+    name: "Santiago Gómez",
+    representative: {
+      name: "Pedro Gómez",
+      cedula: "56789012",
+      email: "pedro.gomez@email.com",
+      phone: "3222222222"
+    }
+  },
 ];
 
 const RP56Menores = () => {
   const [selectedUser, setSelectedUser] = useState("");
+  // Campos del contrato
+  const [pagare, setPagare] = useState("");
+  const [fechaContrato, setFechaContrato] = useState("");
+  const [cuotas, setCuotas] = useState("");
+
+  // Datos personales adicionales
+  const [tarjetaIdentidad, setTarjetaIdentidad] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [celular, setCelular] = useState("");
+
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
   const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
+
+  // Función auxiliar para preparar los datos
+  const prepareContractData = () => {
+    if (!selectedUser || !selectedUserData) return null;
+
+    const camperName = selectedUserData.name;
+    const repData = selectedUserData.representative;
+
+    // Procesar fecha
+    const fechaObj = fechaContrato ? new Date(fechaContrato + 'T00:00:00') : new Date();
+    const dia = fechaObj.getDate().toString();
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const mes = meses[fechaObj.getMonth()];
+    const ano = fechaObj.getFullYear().toString();
+
+    return {
+      "NOMBRE COMPLETO REP": repData.name,
+      "CEDULA REP DEL CAMPER": repData.cedula,
+      "NOMBRE DEL CAMPER": camperName,
+      "NUMERO DE TARJETA DE IDENTIDAD": tarjetaIdentidad,
+      "DIRECCION FISICA DEL CAMPER": direccion,
+      "EMAIL REP CAMPER": repData.email,
+      "CELULAR CAMPER": celular,
+      "dia": dia,
+      "mes": mes,
+      "ano": ano,
+      "NUMERO DE PAGARE": pagare,
+      "numero_cuotas": cuotas
+    };
+  };
+
+  const handePreview = async () => {
+    const data = prepareContractData();
+    if (!data) {
+      toast.error("Por favor complete los datos requeridos");
+      return;
+    }
+
+    try {
+      const blob = await generateContract(
+        "/contratos/Condiciones Específicas- Estratos 5 y 6 - Menor de Edad.docx",
+        data,
+        "preview.docx",
+        true
+      );
+      if (blob instanceof Blob) {
+        setPreviewBlob(blob);
+        toast.success("Vista previa actualizada");
+      }
+    } catch (error) {
+      toast.error("Error al generar vista previa");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,91 +129,153 @@ const RP56Menores = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                  SELECCIONE LOS DATOS DE QUIEN REQUIERA LLENAR LOS DATOS PARA EL CONTRATO
+                  SELECCIONE EL CAMPER
                 </label>
                 <UserSelector
                   value={selectedUser}
                   onChange={setSelectedUser}
                   users={mockUsers}
                 />
+                {selectedUserData && (
+                  <div className="mt-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
+                    <p><strong>Representante:</strong> {selectedUserData.representative.name}</p>
+                    <p><strong>Cédula:</strong> {selectedUserData.representative.cedula}</p>
+                    <p><strong>Email:</strong> {selectedUserData.representative.email}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  NÚMERO DE PAGARÉ
+                </label>
+                <input
+                  type="text"
+                  value={pagare}
+                  onChange={(e) => setPagare(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                  placeholder="Ingrese número de pagaré"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  FECHA DEL CONTRATO
+                </label>
+                <input
+                  type="date"
+                  value={fechaContrato}
+                  onChange={(e) => setFechaContrato(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  NÚMERO DE CUOTAS
+                </label>
+                <input
+                  type="number"
+                  value={cuotas}
+                  onChange={(e) => setCuotas(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                  placeholder="Ej: 12"
+                />
+                <div className="border-t border-border my-4 pt-4">
+                  <h3 className="text-sm font-semibold mb-3">Datos del Camper</h3>
+
+                  <div className="space-y-4">
+                    {/* Campos de Representante ELIMINADOS por solicitud del usuario */}
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        TARJETA DE IDENTIDAD (CAMPER)
+                      </label>
+                      <input
+                        type="text"
+                        value={tarjetaIdentidad}
+                        onChange={(e) => setTarjetaIdentidad(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        DIRECCIÓN FÍSICA
+                      </label>
+                      <input
+                        type="text"
+                        value={direccion}
+                        onChange={(e) => setDireccion(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        CELULAR CAMPER
+                      </label>
+                      <input
+                        type="text"
+                        value={celular}
+                        onChange={(e) => setCelular(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <button className="primary-button mt-8">
-            <Upload className="w-5 h-5" />
-            <span>SUBIR INFORMACIÓN</span>
-          </button>
+            <button
+              className="secondary-button mt-8 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+              onClick={handePreview}
+            >
+              <FileText className="w-5 h-5" />
+              <span>ACTUALIZAR VISTA PREVIA</span>
+            </button>
+
+            <button
+              className="primary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={async () => {
+                const data = prepareContractData();
+                if (!data) {
+                  toast.error("Por favor seleccione un usuario primero");
+                  return;
+                }
+
+                try {
+                  await generateContract(
+                    "/contratos/Condiciones Específicas- Estratos 5 y 6 - Menor de Edad.docx",
+                    data,
+                    `Contrato_RP56_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.docx`
+                  );
+
+                  toast.success("Contrato generado exitosamente");
+                } catch (error) {
+                  toast.error("Error al generar el contrato");
+                }
+              }}
+            >
+              <FileDown className="w-5 h-5" />
+              <span>DESCARGAR EN PDF</span>
+            </button>
+
+            <button
+              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors"
+              onClick={() => toast.info("Funcionalidad de correo próximamente")}
+            >
+              <Mail className="w-5 h-5" />
+              <span>ENVIAR CORREO</span>
+            </button>
+          </div>
         </div>
 
-        {/* Document Preview */}
-        <DocumentPreview>
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-document-foreground mb-2">
-              CONTRATO RECURSOS PROPIOS ESTRATOS 5-6 (MENORES)
-            </h1>
-            <div className="w-12 h-0.5 bg-document-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground tracking-wider">
-              DOCUMENTO OFICIAL CAMPUSLANDS
-            </p>
-          </div>
-
-          <div className="text-sm leading-relaxed text-document-foreground space-y-6">
-            <p className="text-justify">
-              El presente documento formaliza la vinculación del estudiante menor de edad bajo la modalidad 
-              de recursos propios para estratos 5 y 6. El representante legal asume la responsabilidad total 
-              de las obligaciones aquí descritas para el beneficio del Camper vinculado al programa.
-            </p>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="bg-document-foreground text-white text-xs px-2 py-1 rounded">01</span>
-                <h3 className="font-bold text-sm">IDENTIFICACIÓN DE LAS PARTES</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <p className="text-muted-foreground mb-1">CAMPER</p>
-                  <p className="text-primary">{selectedUserData?.name.split(" (")[0] || "Nombre del camper..."}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">REPRESENTANTE LEGAL</p>
-                  <p className="text-primary">{selectedUserData?.name.match(/\(Representante: (.+)\)/)?.[1] || "Nombre del representante..."}</p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-sm mb-2">I. OBJETO DEL ACUERDO</h3>
-              <p className="text-justify">
-                Definir las condiciones de prestación de servicios educativos y el compromiso financiero 
-                por parte del representante para garantizar la formación técnica y profesional del 
-                beneficiario (Camper).
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-sm mb-2">II. RESPONSABILIDAD DEL REPRESENTANTE</h3>
-              <p className="text-justify">
-                El representante legal se compromete a velar por el cumplimiento del reglamento interno 
-                por parte del menor y a cubrir los costos asociados al programa en los tiempos estipulados 
-                por la institución.
-              </p>
-            </div>
-
-            <div className="flex justify-between pt-12 mt-12 border-t border-gray-300">
-              <div className="text-center">
-                <div className="w-40 border-t border-gray-400 pt-2">
-                  <p className="text-xs font-semibold tracking-wider">REPRESENTANTE CAMPUSLANDS</p>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="w-40 border-t border-gray-400 pt-2">
-                  <p className="text-xs font-semibold tracking-wider text-muted-foreground">FIRMA DEL REPRESENTANTE LEGAL</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </DocumentPreview>
+        {/* Document Viewer */}
+        <DocxViewer
+          url="/contratos/Condiciones Específicas- Estratos 5 y 6 - Menor de Edad.docx"
+          blob={previewBlob}
+        />
       </div>
     </div>
   );

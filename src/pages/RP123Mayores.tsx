@@ -1,8 +1,10 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
-import DocumentPreview from "@/components/DocumentPreview";
-import { Upload } from "lucide-react";
+import { Upload, FileDown, Mail } from "lucide-react";
+import DocxViewer from "@/components/DocxViewer";
+import { generateContract } from "@/utils/contractGenerator";
+import { toast } from "sonner";
 
 // Mock users data - replace with real data from your backend
 const mockUsers = [
@@ -13,6 +15,16 @@ const mockUsers = [
 
 const RP123Mayores = () => {
   const [selectedUser, setSelectedUser] = useState("");
+  // Campos del contrato
+  const [pagare, setPagare] = useState("");
+  const [fechaContrato, setFechaContrato] = useState("");
+  const [cuotas, setCuotas] = useState("");
+
+  // Datos personales adicionales
+  const [cedula, setCedula] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [email, setEmail] = useState("");
+  const [celular, setCelular] = useState("");
 
   const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
 
@@ -44,73 +56,163 @@ const RP123Mayores = () => {
                   users={mockUsers}
                 />
               </div>
-            </div>
-          </div>
 
-          <button className="primary-button mt-8">
-            <Upload className="w-5 h-5" />
-            <span>SUBIR INFORMACIÓN</span>
-          </button>
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  NÚMERO DE PAGARÉ
+                </label>
+                <input
+                  type="text"
+                  value={pagare}
+                  onChange={(e) => setPagare(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                  placeholder="Ingrese número de pagaré"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  FECHA DEL CONTRATO
+                </label>
+                <input
+                  type="date"
+                  value={fechaContrato}
+                  onChange={(e) => setFechaContrato(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                  NÚMERO DE CUOTAS
+                </label>
+                <input
+                  type="number"
+                  value={cuotas}
+                  onChange={(e) => setCuotas(e.target.value)}
+                  className="w-full p-2 rounded-md border border-input bg-background"
+                  placeholder="Ej: 12"
+                />
+                <div className="border-t border-border my-4 pt-4">
+                  <h3 className="text-sm font-semibold mb-3">Datos Personales</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        CÉDULA DE CIUDADANÍA
+                      </label>
+                      <input
+                        type="text"
+                        value={cedula}
+                        onChange={(e) => setCedula(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        DIRECCIÓN FÍSICA
+                      </label>
+                      <input
+                        type="text"
+                        value={direccion}
+                        onChange={(e) => setDireccion(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        EMAIL
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                        CELULAR
+                      </label>
+                      <input
+                        type="text"
+                        value={celular}
+                        onChange={(e) => setCelular(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button className="primary-button mt-8">
+              <Upload className="w-5 h-5" />
+              <span>SUBIR INFORMACIÓN</span>
+            </button>
+
+            <button
+              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors"
+              onClick={async () => {
+                if (!selectedUser || !selectedUserData) {
+                  toast.error("Por favor seleccione un usuario primero");
+                  return;
+                }
+
+                try {
+                  const camperName = selectedUserData.name;
+
+                  // Procesar fecha
+                  const fechaObj = fechaContrato ? new Date(fechaContrato + 'T00:00:00') : new Date();
+                  const dia = fechaObj.getDate().toString();
+                  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                  const mes = meses[fechaObj.getMonth()];
+                  const ano = fechaObj.getFullYear().toString();
+
+                  const data = {
+                    "NOMBRE DEL CAMPER": camperName,
+                    "NUMERO DE CEDULA": cedula,
+                    "DIRECCION FISICA CAMPER": direccion,
+                    "EMAIL CAMPER": email,
+                    "CELULAR CAMPER": celular,
+                    "dia": dia,
+                    "mes": mes,
+                    "año": ano,
+                    "NUMERO DE PAGARE": pagare,
+                    "numero_cuotas": cuotas,
+                  };
+
+                  await generateContract(
+                    "/contratos/Condiciones Específicas- Estrato 1, 2 y 3 - Mayor de Edad.docx",
+                    data,
+                    `Contrato_RP123_Mayores_${camperName.replace(/\s+/g, '_')}.docx`
+                  );
+
+                  toast.success("Contrato generado exitosamente");
+                } catch (error) {
+                  toast.error("Error al generar el contrato");
+                }
+              }}
+            >
+              <FileDown className="w-5 h-5" />
+              <span>DESCARGAR EN PDF</span>
+            </button>
+
+            <button
+              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors"
+              onClick={() => toast.info("Funcionalidad de correo próximamente")}
+            >
+              <Mail className="w-5 h-5" />
+              <span>ENVIAR CORREO</span>
+            </button>
+          </div>
         </div>
 
-        {/* Document Preview */}
-        <DocumentPreview>
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-document-foreground mb-2">
-              RECURSOS PROPIOS ESTRATOS 1, 2, 3 MAYORES DE EDAD
-            </h1>
-            <div className="w-12 h-0.5 bg-document-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground tracking-wider">
-              DOCUMENTO OFICIAL CAMPUSLANDS
-            </p>
-          </div>
-
-          <div className="text-sm leading-relaxed text-document-foreground space-y-6">
-            <p className="text-justify">
-              Por medio del presente documento, se formaliza el acuerdo de formación educativa entre{" "}
-              <strong>CAMPUSLANDS</strong> y el beneficiario{" "}
-              <strong>{selectedUserData?.name || "[Nombre del estudiante]"}</strong>.
-            </p>
-
-            <p className="text-justify">
-              El beneficiario declara bajo la gravedad de juramento que pertenece a los estratos 
-              socioeconómicos 1, 2 o 3, requisito indispensable para el acceso al programa de 
-              formación financiado con recursos propios de la institución.
-            </p>
-
-            <div>
-              <h3 className="font-bold text-sm mb-2">CLÁUSULA PRIMERA - OBJETO:</h3>
-              <p className="text-justify">
-                Campuslands se compromete a brindar formación técnica especializada en desarrollo de 
-                software, cubriendo el 100% de los costos educativos. El beneficiario se compromete a 
-                cumplir con la intensidad horaria y los estándares de calidad académica establecidos.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-sm mb-2">CLÁUSULA SEGUNDA - COMPROMISOS:</h3>
-              <p className="text-justify">
-                El estudiante debe mantener una asistencia mínima del 95% y cumplir con todos los retos 
-                y evaluaciones del programa. Cualquier incumplimiento injustificado podrá ser causal de 
-                retiro inmediato del programa de becas.
-              </p>
-            </div>
-
-            <div className="flex justify-between pt-12 mt-12 border-t border-gray-300">
-              <div className="text-center">
-                <div className="w-40 border-t border-gray-400 pt-2">
-                  <p className="text-xs font-semibold">FIRMA CAMPUSLANDS</p>
-                  <p className="text-xs text-muted-foreground">Representante Legal</p>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="w-40 border-t border-gray-400 pt-2">
-                  <p className="text-xs font-semibold">FIRMA DEL CAMPER</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </DocumentPreview>
+        {/* Document Viewer */}
+        <DocxViewer url="/contratos/Condiciones Específicas- Estrato 1, 2 y 3 - Mayor de Edad.docx" />
       </div>
     </div>
   );
