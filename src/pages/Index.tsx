@@ -14,7 +14,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -43,7 +43,7 @@ const Index = () => {
               <a href="#" className="hover:text-foreground transition-colors">Soporte</a>
             </div>
             <p className="text-xs text-muted-foreground tracking-wider">
-              © 2024 CAMPUSLANDS • SECURE ENVIRONMENT
+              © 2026 CAMPUSLANDS • SECURE ENVIRONMENT
             </p>
           </div>
         </div>
