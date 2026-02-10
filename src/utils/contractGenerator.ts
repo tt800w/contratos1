@@ -20,6 +20,10 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
         const doc = new Docxtemplater(zip, {
             paragraphLoop: true,
             linebreaks: true,
+            delimiters: {
+                start: "{",
+                end: "}"
+            }
         });
 
         // Add a check for valid data

@@ -7,6 +7,7 @@ try {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     // Convert sheet to JSON with header: 1 to get array of arrays
+    // Use header: 1 to get raw array of arrays
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
     if (data.length > 0) {
         console.log("Headers:", JSON.stringify(data[0], null, 2));

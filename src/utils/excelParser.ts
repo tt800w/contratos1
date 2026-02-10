@@ -41,13 +41,13 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                 console.log("Excel Headers (First Row keys):", Object.keys(jsonData[0] || {}));
 
                 const parsedData: CamperData[] = jsonData.map((row: any) => ({
-                    nombreRepresentante: getValue(row, ['Nombre completo representante', 'Nombre Representante', 'Acudiente']),
-                    cedulaRepresentante: getValue(row, ['Número cédula representante', 'Cédula Representante', 'Cedula Representante', 'CC Representante']),
-                    nombreCamper: getValue(row, ['Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
-                    documentoCamper: getValue(row, ['Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
-                    direccionCamper: getValue(row, ['Dirección física Camper', 'Dirección', 'Direccion']),
-                    emailRepresentante: getValue(row, ['Email representante Camper', 'Email', 'Correo', 'Correo Electrónico']),
-                    celularCamper: getValue(row, ['Celular Camper', 'Celular', 'Teléfono', 'Telefono']),
+                    nombreRepresentante: getValue(row, ['Nombre y apellido del acudiente', 'Nombre completo representante', 'Nombre Representante', 'Acudiente']),
+                    cedulaRepresentante: getValue(row, ['Número de documento del acudiente', 'Número cédula representante', 'Cédula Representante', 'Cedula Representante', 'CC Representante']),
+                    nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
+                    documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
+                    direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion']),
+                    emailRepresentante: getValue(row, ['Dirección de correo electrónico', 'Email representante Camper', 'Email', 'Correo', 'Correo Electrónico']),
+                    celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono']),
                 }));
 
                 resolve(parsedData);

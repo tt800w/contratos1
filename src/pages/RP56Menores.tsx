@@ -86,9 +86,9 @@ const RP56Menores = () => {
         setPreviewBlob(blob);
         toast.success("Vista previa actualizada");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al generar vista previa");
+      toast.error(`Error al generar vista previa: ${error.message || "Error desconocido"}`);
     }
   };
 
@@ -232,8 +232,8 @@ const RP56Menores = () => {
                   );
 
                   toast.success("Contrato generado exitosamente");
-                } catch (error) {
-                  toast.error("Error al generar el contrato");
+                } catch (error: any) {
+                  toast.error(`Error al generar el contrato: ${error.message || "Error desconocido"}`);
                 }
               }}
               disabled={!selectedUser}
