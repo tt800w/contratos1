@@ -3,7 +3,8 @@ import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
 import { Upload, FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
 import DocxViewer from "@/components/DocxViewer";
-import { generateContract } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData } from "@/utils/contractGenerator";
+import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
 
@@ -53,25 +54,7 @@ const RP123Mayores = () => {
     try {
       const raw = selectedUserData.raw as CamperData;
 
-      // Procesar fecha
-      const fechaObj = fechaContrato ? new Date(fechaContrato + 'T00:00:00') : new Date();
-      const dia = fechaObj.getDate().toString();
-      const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-      const mes = meses[fechaObj.getMonth()];
-      const ano = fechaObj.getFullYear().toString();
-
-      const data = {
-        "NOMBRE DEL CAMPER": raw.nombreCamper,
-        "NUMERO DE CEDULA": raw.documentoCamper,
-        "DIRECCION FISICA CAMPER": raw.direccionCamper,
-        "EMAIL CAMPER": raw.emailRepresentante,
-        "CELULAR CAMPER": raw.celularCamper,
-        "dia": dia,
-        "mes": mes,
-        "año": ano,
-        "NUMERO DE PAGARE": pagare,
-        "numero_cuotas": cuotas,
-      };
+      const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas });
 
       const blob = await generateContract(
         "/contratos/Condiciones Específicas- Estrato 1, 2 y 3 - Mayor de Edad.docx",
@@ -201,24 +184,7 @@ const RP123Mayores = () => {
 
                 try {
                   const raw = selectedUserData.raw as CamperData;
-                  const fechaObj = fechaContrato ? new Date(fechaContrato + 'T00:00:00') : new Date();
-                  const dia = fechaObj.getDate().toString();
-                  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-                  const mes = meses[fechaObj.getMonth()];
-                  const ano = fechaObj.getFullYear().toString();
-
-                  const data = {
-                    "NOMBRE DEL CAMPER": raw.nombreCamper,
-                    "NUMERO DE CEDULA": raw.documentoCamper,
-                    "DIRECCION FISICA CAMPER": raw.direccionCamper,
-                    "EMAIL CAMPER": raw.emailRepresentante,
-                    "CELULAR CAMPER": raw.celularCamper,
-                    "dia": dia,
-                    "mes": mes,
-                    "año": ano,
-                    "NUMERO DE PAGARE": pagare,
-                    "numero_cuotas": cuotas,
-                  };
+                  const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas });
 
                   await generateContract(
                     "/contratos/Condiciones Específicas- Estrato 1, 2 y 3 - Mayor de Edad.docx",
@@ -238,8 +204,28 @@ const RP123Mayores = () => {
             </button>
 
             <button
-              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors"
-              onClick={() => toast.info("Funcionalidad de correo próximamente")}
+              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              disabled={!selectedUser}
+              onClick={async () => {
+                const raw = selectedUserData.raw as CamperData;
+                const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas });
+
+                toast.promise(async () => {
+                  const blob = await generateContract(
+                    "/contratos/Condiciones Específicas- Estrato 1, 2 y 3 - Mayor de Edad.docx",
+                    data,
+                    "contrato.docx",
+                    true
+                  );
+
+                  const url = await uploadToZapSign(blob as Blob, `Contrato_RP123_${raw.nombreCamper}.docx`);
+                  window.open(url, '_blank');
+                }, {
+                  loading: 'Subiendo contrato a ZapSign...',
+                  success: 'Contrato subido. Se abrirá ZapSign para finalizar.',
+                  error: (err) => `No se pudo enviar a ZapSign: ${err.message}`
+                });
+              }}
             >
               <Mail className="w-5 h-5" />
               <span>ENVIAR CORREO</span>

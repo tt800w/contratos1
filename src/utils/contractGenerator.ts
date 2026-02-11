@@ -2,6 +2,70 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 
+export interface UnifiedContractData {
+    raw: any;
+    extraData?: {
+        pagare?: string;
+        fechaContrato?: string;
+        cuotas?: string;
+        [key: string]: any;
+    };
+}
+
+export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
+    const fechaObj = extraData.fechaContrato ? new Date(extraData.fechaContrato + 'T00:00:00') : new Date();
+    const dia = fechaObj.getDate().toString();
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const mes = meses[fechaObj.getMonth()];
+    const ano = fechaObj.getFullYear().toString();
+
+    return {
+        // Camper data with variations
+        "NOMBRE DEL CAMPER": raw.nombreCamper,
+        "NUMERO DE CEDULA": raw.documentoCamper,
+        "NUMERO DE TARJETA DE IDENTIDAD": raw.documentoCamper,
+        "DOCUMENTO": raw.documentoCamper,
+
+        "DIRECCION FISICA CAMPER": raw.direccionCamper,
+        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
+        "DIRECCION": raw.direccionCamper,
+
+        "EMAIL CAMPER": raw.emailRepresentante, // In many models, this is the main contact
+        "EMAIL REP CAMPER": raw.emailRepresentante,
+        "CORREO": raw.emailRepresentante,
+
+        "CELULAR CAMPER": raw.celularCamper,
+        "CELULAR": raw.celularCamper,
+        "TELEFONO": raw.celularCamper,
+
+        // Representative data
+        "NOMBRE COMPLETO REP": raw.nombreRepresentante,
+        "CEDULA REP DEL CAMPER": raw.cedulaRepresentante,
+        "CEDULA REPRESENTANTE": raw.cedulaRepresentante,
+
+        "TELEFONO REP CAMPER": raw.telefonoRepresentante,
+        "TELEFONO REPRESENTANTE": raw.telefonoRepresentante,
+        "CELULAR REPRESENTANTE": raw.telefonoRepresentante,
+
+        // Date variations
+        "dia": dia,
+        "mes": mes,
+        "año": ano,
+        "ano": ano,
+        "AÑO": ano,
+        "ANO": ano,
+
+        // Additional fields
+        "NUMERO DE PAGARE": extraData.pagare || '',
+        "PAGARE": extraData.pagare || '',
+        "numero_cuotas": extraData.cuotas || '',
+        "CUOTAS": extraData.cuotas || '',
+
+        // Include everything from extraData just in case
+        ...extraData
+    };
+};
+
 export const generateContract = async (templateUrl: string, data: any, outputName: string, returnBlob: boolean = false) => {
     try {
         console.log("Generating contract with data:", JSON.stringify(data, null, 2));

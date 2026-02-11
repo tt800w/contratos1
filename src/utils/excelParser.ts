@@ -9,6 +9,7 @@ export interface CamperData {
     direccionCamper: string;
     emailRepresentante: string;
     celularCamper: string;
+    telefonoRepresentante: string;
 }
 
 // Helper to find value from a row checking multiple possible headers
@@ -46,8 +47,9 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                     nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
                     documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
                     direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion']),
-                    emailRepresentante: getValue(row, ['Dirección de correo electrónico', 'Email representante Camper', 'Email', 'Correo', 'Correo Electrónico']),
-                    celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono']),
+                    emailRepresentante: getValue(row, ['Dirección de correo electrónico', 'Email representante Camper', 'Email', 'Correo', 'Correo Electrónico', 'EMAIL REP CAMPER']),
+                    celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER']),
+                    telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER']),
                 }));
 
                 resolve(parsedData);
