@@ -37,11 +37,14 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                 containerRef.current.innerHTML = "";
 
                 await renderAsync(docData, containerRef.current, undefined, {
-                    inWrapper: false,
-                    ignoreWidth: false, // CRÍTICO: Respetar el ancho del documento Word
+                    inWrapper: false, // Renderizado directo sin el wrapper de la librería
+                    ignoreWidth: false,
+                    ignoreHeight: true,
                     experimental: true,
                     useBase64URL: true,
-                    breakPages: true
+                    breakPages: false,
+                    renderHeaders: true,
+                    renderFooters: true,
                 });
             } catch (error) {
                 console.error("Error displaying document:", error);
@@ -57,9 +60,9 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
     }, [url, blob, key]);
 
     return (
-        <div className="flex-1 bg-muted/30 p-4 md:p-8 min-h-screen overflow-hidden flex flex-col">
+        <div className="flex-1 bg-muted/30 p-2 md:p-4 h-[calc(100vh-65px)] overflow-hidden flex flex-col">
             {/* Header / Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4 bg-card p-3 rounded-lg border shadow-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <FileText className="w-4 h-4" />
                     <span className="text-xs font-medium tracking-wider uppercase">{title}</span>
@@ -68,7 +71,7 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setZoom(Math.max(50, zoom - 10))}
-                        className="p-2 bg-card rounded-lg hover:bg-secondary transition-colors border shadow-sm"
+                        className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm"
                         title="Reducir Zoom"
                     >
                         <ZoomOut className="w-4 h-4" />
@@ -76,14 +79,14 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                     <span className="text-xs font-mono w-12 text-center">{zoom}%</span>
                     <button
                         onClick={() => setZoom(Math.min(200, zoom + 10))}
-                        className="p-2 bg-card rounded-lg hover:bg-secondary transition-colors border shadow-sm"
+                        className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm"
                         title="Aumentar Zoom"
                     >
                         <ZoomIn className="w-4 h-4" />
                     </button>
                     <button
                         onClick={reloadDocument}
-                        className="p-2 bg-card rounded-lg hover:bg-secondary transition-colors border shadow-sm ml-2"
+                        className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm ml-2"
                         title="Recargar Documento"
                     >
                         <RotateCw className="w-4 h-4" />
@@ -92,39 +95,70 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
             </div>
 
             {/* Document Container */}
-            <div className="flex-1 overflow-auto bg-gray-100/50 rounded-xl border border-border p-4 flex justify-center items-start">
+            <div className="flex-1 overflow-auto bg-gray-400/50 rounded-xl border border-border flex justify-center items-start p-4">
                 {isLoading && (
-                    <div className="flex items-center gap-2 text-muted-foreground mt-20">
+                    <div className="flex items-center gap-2 text-muted-foreground mt-20 absolute z-10">
                         <RotateCw className="w-5 h-5 animate-spin" />
                         <span>Cargando documento...</span>
                     </div>
                 )}
 
                 <div
-                    className="transition-transform origin-top duration-200 ease-out bg-white shadow-lg mx-auto"
+                    className="transition-transform origin-top duration-200 ease-out bg-white shadow-2xl"
                     style={{
                         transform: `scale(${zoom / 100})`,
-                        // Aseguramos que el contenedor tenga el tamaño adecuado
-                        // Un documento Word A4 estándar suele tener 21cm de ancho
-                        // Usamos width fijo para evitar que flexbox lo aplaste (distorsión)
-                        width: "21cm",
-                        minHeight: "29.7cm",
-                        marginBottom: `${(zoom - 100) * 0.5}%`
+                        width: "21cm", // Ancho estándar de Word
+                        margin: "0 auto",
+                        backgroundColor: "white",
+                        minHeight: "fit-content"
                     }}
                 >
                     <div ref={containerRef} className="docx-render-content" />
                 </div>
             </div>
 
-            {/* Estilos para forzar un buen comportamiento del renderizador */}
             <style>{`
-        .docx-render-content section {
-          box-shadow: none !important;
-          margin-bottom: 0 !important;
+        .docx-render-content {
+          width: 100% !important;
+          background-color: white !important;
+          display: flex !important;
+          flex-direction: column !important;
         }
-        .docx_wrapper {
-          background: transparent !important;
+        /* Forzar que cada sección sea continua y sin huecos */
+        .docx-render-content section {
+          width: 100% !important;
+          padding: 1.5cm 2.5cm !important; /* Margen algo más pequeño para evitar saltos */
+          box-shadow: none !important;
+          margin: 0 !important;
+          background: white !important;
+          min-height: auto !important;
+          border: none !important;
+          position: relative !important;
+        }
+        /* Eliminar cualquier rastro de páginas o separadores */
+        .docx_page_break, .docx_separator, [class*="separator"], [class*="break"] {
+          display: none !important;
+          height: 0 !important;
+          margin: 0 !important;
           padding: 0 !important;
+        }
+        /* Tablas que ocupen lo que deben */
+        .docx-render-content table {
+          width: 100% !important;
+          table-layout: auto !important;
+          border-collapse: collapse !important;
+        }
+        /* Ocultar ABSOLUTAMENTE cualquier elemento vacío a nivel de bloque */
+        .docx-render-content p:empty, 
+        .docx-render-content p:blank,
+        .docx-render-content section:empty,
+        .docx-render-content div:empty {
+          display: none !important;
+        }
+        /* Si el párrafo solo tiene un espacio, también ocultarlo */
+        .docx-render-content p {
+          margin: 0 !important;
+          padding: 1pt 0 !important;
         }
       `}</style>
         </div>

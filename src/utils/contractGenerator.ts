@@ -12,12 +12,40 @@ export interface UnifiedContractData {
     };
 }
 
+import { formatCurrencySpanish } from './numberToWords';
+
 export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const fechaObj = extraData.fechaContrato ? new Date(extraData.fechaContrato + 'T00:00:00') : new Date();
     const dia = fechaObj.getDate().toString();
     const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     const mes = meses[fechaObj.getMonth()];
     const ano = fechaObj.getFullYear().toString();
+
+    const numCuotasTotal = parseInt(extraData.cuotas) || 1;
+    let planPagos = "";
+
+    // Lógica específica para Recursos Propios
+    if (extraData.isRP) {
+        const TOTAL_RP = 13000000;
+        const PRIMER_PAGO = 3400000;
+
+        const primerPagoTexto = `PRIMER PAGO: ${formatCurrencySpanish(PRIMER_PAGO)} al momento de la firma del presente documento.`;
+
+        if (numCuotasTotal > 1) {
+            const saldoRestante = TOTAL_RP - PRIMER_PAGO;
+            const cuotasRestantes = numCuotasTotal - 1;
+            const valorCuotaRestante = Math.floor(saldoRestante / cuotasRestantes);
+            const ajusteUltimaCuota = saldoRestante - (valorCuotaRestante * (cuotasRestantes - 1));
+
+            planPagos = primerPagoTexto + "\n";
+            for (let i = 2; i <= numCuotasTotal; i++) {
+                const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuotaRestante;
+                planPagos += `CUOTA ${i}: ${formatCurrencySpanish(valorAUsar)}.\n`;
+            }
+        } else {
+            planPagos = primerPagoTexto;
+        }
+    }
 
     return {
         // Camper data with variations
@@ -30,7 +58,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
         "DIRECCION": raw.direccionCamper,
 
-        "EMAIL CAMPER": raw.emailRepresentante, // In many models, this is the main contact
+        "EMAIL CAMPER": raw.emailRepresentante,
         "EMAIL REP CAMPER": raw.emailRepresentante,
         "CORREO": raw.emailRepresentante,
 
@@ -60,6 +88,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "PAGARE": extraData.pagare || '',
         "numero_cuotas": extraData.cuotas || '',
         "CUOTAS": extraData.cuotas || '',
+        "PLAN_PAGOS": planPagos,
 
         // Include everything from extraData just in case
         ...extraData

@@ -36,10 +36,11 @@ export const uploadToZapSign = async (blob: Blob, fileName: string) => {
 
         const base64 = await blobToBase64(blob);
 
-        const response = await fetch(`${API_URL}?api_token=${API_TOKEN}`, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_TOKEN}`
             },
             body: JSON.stringify({
                 name: fileName,
@@ -52,13 +53,20 @@ export const uploadToZapSign = async (blob: Blob, fileName: string) => {
             }),
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('ZapSign API Error Details:', errorData);
-            throw new Error(`Error de ZapSign (${response.status}): ${JSON.stringify(errorData)}`);
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('ZapSign Response is not JSON:', responseText);
+            throw new Error(`Respuesta inesperada de ZapSign: ${responseText.substring(0, 100)}...`);
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+            console.error('ZapSign API Error Details:', data);
+            throw new Error(`Error de ZapSign (${response.status}): ${data.detail || JSON.stringify(data)}`);
+        }
+
         console.log('ZapSign Upload Success:', data);
 
         // ZapSign devuelve un 'token' que identifica al documento.
