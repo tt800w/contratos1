@@ -9,7 +9,8 @@ const API_TOKEN = import.meta.env.VITE_ZAPSIGN_API_TOKEN;
 const API_URL = '/zapsign-api/v1/docs/';
 
 /**
- * Convierte un Blob a una cadena Base64 sin el prefijo del tipo de datos.
+ * Convierte un Blob a una cadena Base64 sin el prefijo del t
+ * ipo de datos.
  */
 const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
