@@ -4,17 +4,15 @@ import ContractCard from "@/components/ContractCard";
 const contracts = [
   { title: "Lumni Menores de edad", route: "/lumni-menores" },
   { title: "Lumni Mayores de edad", route: "/lumni-mayores" },
-  { title: "Recursos Propios Estratos 1,2,3 Menores", route: "/rp-123-menores" },
-  { title: "Recursos Propios Estratos 1,2,3 Mayores", route: "/rp-123-mayores" },
-  { title: "Recursos Propios Estratos 5 y 6 Menores", route: "/rp-56-menores" },
-  { title: "Recursos Propios Estratos 5 y 6 Mayores", route: "/rp-56-mayores" },
+  { title: "Recursos Propios Menores de edad", route: "/rp-menores" },
+  { title: "Recursos Propios Mayores de edad", route: "/rp-mayores" },
 ];
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -23,14 +21,40 @@ const Index = () => {
           <div className="w-16 h-1 bg-primary mx-auto rounded-full" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {contracts.map((contract, index) => (
-            <ContractCard
-              key={index}
-              title={contract.title}
-              route={contract.route}
-            />
-          ))}
+        <div className="max-w-5xl mx-auto space-y-12">
+          {/* Sección Lumni */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-primary"></span>
+              CONTRATOS LUMNI
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {contracts.filter(c => c.title.includes("Lumni")).map((contract, index) => (
+                <ContractCard
+                  key={index}
+                  title={contract.title}
+                  route={contract.route}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Sección Recursos Propios */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-primary"></span>
+              CONTRATOS RECURSOS PROPIOS
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {contracts.filter(c => c.title.includes("Recursos Propios")).map((contract, index) => (
+                <ContractCard
+                  key={index}
+                  title={contract.title}
+                  route={contract.route}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </main>
 
@@ -43,7 +67,7 @@ const Index = () => {
               <a href="#" className="hover:text-foreground transition-colors">Soporte</a>
             </div>
             <p className="text-xs text-muted-foreground tracking-wider">
-              © 2024 CAMPUSLANDS • SECURE ENVIRONMENT
+              © 2026 CAMPUSLANDS • SECURE ENVIRONMENT
             </p>
           </div>
         </div>

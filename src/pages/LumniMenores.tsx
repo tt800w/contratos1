@@ -1,93 +1,62 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
-import { Upload, FileDown, Mail, FileText } from "lucide-react";
+import { FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
 import DocxViewer from "@/components/DocxViewer";
-import { generateContract } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF } from "@/utils/contractGenerator";
+import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
-
-// Mock users data - replace with real data from your backend
-const mockUsers = [
-  {
-    id: "1",
-    name: "Juan Pérez García",
-    representative: {
-      name: "María García",
-      cedula: "41234567",
-      email: "maria.garcia@email.com",
-      phone: "3111111111"
-    }
-  },
-  {
-    id: "2",
-    name: "Carlos López",
-    representative: {
-      name: "Pedro López",
-      cedula: "82345678",
-      email: "pedro.lopez@email.com",
-      phone: "3222222222"
-    }
-  },
-  {
-    id: "3",
-    name: "Ana Martínez",
-    representative: {
-      name: "Rosa Martínez",
-      cedula: "53456789",
-      email: "rosa.martinez@email.com",
-      phone: "3333333333"
-    }
-  },
-];
+import { parseExcel, CamperData } from "@/utils/excelParser";
 
 const LumniMenores = () => {
+  const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   // Campos del contrato
   const [pagare, setPagare] = useState("");
   const [fechaContrato, setFechaContrato] = useState("");
-
-  // Datos personales adicionales
-  const [tarjetaIdentidad, setTarjetaIdentidad] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [celular, setCelular] = useState("");
-
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
-  const selectedUserData = mockUsers.find((u) => u.id === selectedUser);
+  const selectedUserData = users.find((u) => u.id === selectedUser);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await parseExcel(file);
+      // Map parsed data to the structure expected by UserSelector and the app
+      const mappedUsers = data.map((item, index) => ({
+        id: index.toString(),
+        name: item.nombreCamper,
+        representative: {
+          name: item.nombreRepresentante,
+          cedula: item.cedulaRepresentante,
+          email: item.emailRepresentante,
+          phone: "N/A" // Not in Excel headers, can be ignored or added if available later
+        },
+        // Store raw item for full access
+        raw: item
+      }));
+
+      setUsers(mappedUsers);
+      toast.success(`Se cargaron ${mappedUsers.length} campers correctamente`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al procesar el archivo Excel");
+    }
+  };
 
   // Función auxiliar para preparar los datos
   const prepareContractData = () => {
     if (!selectedUser || !selectedUserData) return null;
-
-    const camperName = selectedUserData.name;
-    const repData = selectedUserData.representative;
-
-    // Procesar fecha
-    const fechaObj = fechaContrato ? new Date(fechaContrato + 'T00:00:00') : new Date();
-    const dia = fechaObj.getDate().toString();
-    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const mes = meses[fechaObj.getMonth()];
-    const ano = fechaObj.getFullYear().toString();
-
-    return {
-      "NOMBRE COMPLETO REP": repData.name,
-      "CEDULA REP DEL CAMPER": repData.cedula,
-      "NOMBRE DEL CAMPER": camperName,
-      "NUMERO DE TARJETA DE IDENTIDAD": tarjetaIdentidad,
-      "DIRECCION FISICA DEL CAMPER": direccion,
-      "EMAIL REP CAMPER": repData.email,
-      "CELULAR CAMPER": celular,
-      "dia": dia,
-      "mes": mes,
-      "ano": ano,
-      "NUMERO DE PAGARE": pagare,
-    };
+    const raw = selectedUserData.raw as CamperData;
+    return prepareUnifiedData(raw, { pagare, fechaContrato });
   };
 
   const handePreview = async () => {
     const data = prepareContractData();
     if (!data) {
-      toast.error("Por favor complete los datos requeridos");
+      toast.error("Por favor seleccione un camper y complete los datos requeridos");
       return;
     }
 
@@ -102,11 +71,11 @@ const LumniMenores = () => {
         setPreviewBlob(blob);
         toast.success("Vista previa actualizada");
       }
-    } catch (error) {
-      toast.error("Error al generar vista previa");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Error al generar vista previa: ${error.message || "Error desconocido"}`);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,28 +90,48 @@ const LumniMenores = () => {
                 Lumni Menores de edad
               </h2>
               <p className="text-sm text-muted-foreground">
-                Seleccione el perfil para cargar la información en el documento.
+                Cargue el archivo Excel y seleccione el perfil para generar el contrato.
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                  SELECCIONE EL CAMPER
-                </label>
-                <UserSelector
-                  value={selectedUser}
-                  onChange={setSelectedUser}
-                  users={mockUsers}
+            <div className="space-y-6">
+              {/* Excel Upload */}
+              <div className="p-4 border-2 border-dashed border-muted-foreground/25 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors text-center">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="excel-upload"
                 />
-                {selectedUserData && (
-                  <div className="mt-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
-                    <p><strong>Representante:</strong> {selectedUserData.representative.name}</p>
-                    <p><strong>Cédula:</strong> {selectedUserData.representative.cedula}</p>
-                    <p><strong>Email:</strong> {selectedUserData.representative.email}</p>
-                  </div>
-                )}
+                <label htmlFor="excel-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                  <FileSpreadsheet className="w-8 h-8 text-green-600" />
+                  <span className="text-sm font-medium">Cargar Excel de Campers</span>
+                  <span className="text-xs text-muted-foreground">(.xlsx, .xls)</span>
+                </label>
               </div>
+
+              {users.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
+                    SELECCIONE EL CAMPER ({users.length} disponibles)
+                  </label>
+                  <UserSelector
+                    value={selectedUser}
+                    onChange={setSelectedUser}
+                    users={users}
+                  />
+                  {selectedUserData && (
+                    <div className="mt-2 text-xs text-muted-foreground bg-secondary/50 p-3 rounded space-y-1">
+                      <p><strong>Representante:</strong> {selectedUserData.raw.nombreRepresentante}</p>
+                      <p><strong>Cédula Rep:</strong> {selectedUserData.raw.cedulaRepresentante}</p>
+                      <p><strong>Email Rep:</strong> {selectedUserData.raw.emailRepresentante}</p>
+                      <p><strong>Documento Camper:</strong> {selectedUserData.raw.documentoCamper}</p>
+                      <p><strong>Celular Camper:</strong> {selectedUserData.raw.celularCamper}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
@@ -167,89 +156,92 @@ const LumniMenores = () => {
                   onChange={(e) => setFechaContrato(e.target.value)}
                   className="w-full p-2 rounded-md border border-input bg-background"
                 />
-                <div className="border-t border-border my-4 pt-4">
-                  <h3 className="text-sm font-semibold mb-3">Datos del Camper</h3>
-
-                  <div className="space-y-4">
-                    {/* Campos de Representante ELIMINADOS por solicitud del usuario */}
-
-                    <div>
-                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                        TARJETA DE IDENTIDAD (CAMPER)
-                      </label>
-                      <input
-                        type="text"
-                        value={tarjetaIdentidad}
-                        onChange={(e) => setTarjetaIdentidad(e.target.value)}
-                        className="w-full p-2 rounded-md border border-input bg-background"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                        DIRECCIÓN FÍSICA
-                      </label>
-                      <input
-                        type="text"
-                        value={direccion}
-                        onChange={(e) => setDireccion(e.target.value)}
-                        className="w-full p-2 rounded-md border border-input bg-background"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                        CELULAR CAMPER
-                      </label>
-                      <input
-                        type="text"
-                        value={celular}
-                        onChange={(e) => setCelular(e.target.value)}
-                        className="w-full p-2 rounded-md border border-input bg-background"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
             <button
               className="secondary-button mt-8 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
               onClick={handePreview}
+              disabled={!selectedUser}
             >
               <FileText className="w-5 h-5" />
               <span>ACTUALIZAR VISTA PREVIA</span>
             </button>
 
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  const data = prepareContractData();
+                  if (!data) {
+                    toast.error("Complete los datos requeridos");
+                    return;
+                  }
+
+                  try {
+                    await generateContract(
+                      "/contratos/Condiciones Específicas-Financiación Lumni- Menor de Edad.docx",
+                      data,
+                      `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.docx`
+                    );
+
+                    toast.success("Archivo Word generado");
+                  } catch (error: any) {
+                    toast.error(`Error: ${error.message}`);
+                  }
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>WORD</span>
+              </button>
+
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  const data = prepareContractData();
+                  if (!data) {
+                    toast.error("Complete el previo primero");
+                    return;
+                  }
+                  const fileName = `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.pdf`;
+
+                  toast.promise(downloadAsPDF("docx-reader-container", fileName), {
+                    loading: 'Generando PDF...',
+                    success: 'PDF descargado',
+                    error: (err) => `Error: ${err.message}`
+                  });
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>PDF</span>
+              </button>
+            </div>
+
             <button
-              className="primary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              disabled={!selectedUser}
               onClick={async () => {
                 const data = prepareContractData();
-                if (!data) {
-                  toast.error("Por favor complete los datos requeridos");
-                  return;
-                }
+                const raw = selectedUserData.raw as CamperData;
 
-                try {
-                  await generateContract(
+                toast.promise(async () => {
+                  const blob = await generateContract(
                     "/contratos/Condiciones Específicas-Financiación Lumni- Menor de Edad.docx",
                     data,
-                    `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.docx`
+                    "contrato.docx",
+                    true
                   );
 
-                  toast.success("Contrato generado exitosamente");
-                } catch (error) {
-                  toast.error("Error al generar el contrato");
-                }
+                  const url = await uploadToZapSign(blob as Blob, `Contrato_Lumni_Menor_${raw.nombreCamper}.docx`);
+                  window.open(url, '_blank');
+                }, {
+                  loading: 'Subiendo contrato a ZapSign...',
+                  success: 'Contrato subido. Se abrirá ZapSign para finalizar.',
+                  error: (err) => `No se pudo enviar a ZapSign: ${err.message}`
+                });
               }}
-            >
-              <FileDown className="w-5 h-5" />
-              <span>DESCARGAR EN PDF</span>
-            </button>
-
-            <button
-              className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors"
-              onClick={() => toast.info("Funcionalidad de correo próximamente")}
             >
               <Mail className="w-5 h-5" />
               <span>ENVIAR CORREO</span>
