@@ -37,12 +37,12 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                 containerRef.current.innerHTML = "";
 
                 await renderAsync(docData, containerRef.current, undefined, {
-                    inWrapper: false, // Renderizado directo sin el wrapper de la librería
+                    inWrapper: false,
                     ignoreWidth: false,
-                    ignoreHeight: true,
+                    ignoreHeight: false,
                     experimental: true,
                     useBase64URL: true,
-                    breakPages: false,
+                    breakPages: true,
                     renderHeaders: true,
                     renderFooters: true,
                 });
@@ -104,13 +104,13 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                 )}
 
                 <div
-                    className="transition-transform origin-top duration-200 ease-out bg-white shadow-2xl"
+                    id="docx-reader-container"
+                    className="origin-top bg-transparent mb-8"
                     style={{
                         transform: `scale(${zoom / 100})`,
-                        width: "21cm", // Ancho estándar de Word
+                        transition: 'transform 0.2s ease-out',
+                        width: "210mm",
                         margin: "0 auto",
-                        backgroundColor: "white",
-                        minHeight: "fit-content"
                     }}
                 >
                     <div ref={containerRef} className="docx-render-content" />
@@ -120,45 +120,35 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
             <style>{`
         .docx-render-content {
           width: 100% !important;
-          background-color: white !important;
-          display: flex !important;
-          flex-direction: column !important;
+          background-color: transparent !important;
         }
-        /* Forzar que cada sección sea continua y sin huecos */
+        /* Estilo de página individual */
         .docx-render-content section {
-          width: 100% !important;
-          padding: 1.5cm 2.5cm !important; /* Margen algo más pequeño para evitar saltos */
-          box-shadow: none !important;
-          margin: 0 !important;
+          width: 210mm !important;
+          min-height: 297mm !important;
+          padding: 2.5cm !important;
+          margin-bottom: 20px !important;
           background: white !important;
-          min-height: auto !important;
-          border: none !important;
+          box-shadow: 0 0 10px rgba(0,0,0,0.2) !important;
           position: relative !important;
+          display: block !important;
+          box-sizing: border-box !important;
         }
-        /* Eliminar cualquier rastro de páginas o separadores */
-        .docx_page_break, .docx_separator, [class*="separator"], [class*="break"] {
-          display: none !important;
+        /* Respetar saltos de página de la librería */
+        .docx_page_break {
+          display: block !important;
+          page-break-after: always !important;
           height: 0 !important;
           margin: 0 !important;
-          padding: 0 !important;
         }
-        /* Tablas que ocupen lo que deben */
+        /* Tablas */
         .docx-render-content table {
           width: 100% !important;
-          table-layout: auto !important;
           border-collapse: collapse !important;
         }
-        /* Ocultar ABSOLUTAMENTE cualquier elemento vacío a nivel de bloque */
-        .docx-render-content p:empty, 
-        .docx-render-content p:blank,
-        .docx-render-content section:empty,
-        .docx-render-content div:empty {
-          display: none !important;
-        }
-        /* Si el párrafo solo tiene un espacio, también ocultarlo */
         .docx-render-content p {
-          margin: 0 !important;
-          padding: 1pt 0 !important;
+          margin-bottom: 8pt !important;
+          line-height: 1.2 !important;
         }
       `}</style>
         </div>

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
-import { Upload, FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
+import { FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
 import DocxViewer from "@/components/DocxViewer";
-import { generateContract, prepareUnifiedData } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
@@ -177,34 +177,58 @@ const LumniMayores = () => {
               <span>ACTUALIZAR VISTA PREVIA</span>
             </button>
 
-            <button
-              className="primary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={async () => {
-                if (!selectedUser || !selectedUserData) {
-                  toast.error("Por favor seleccione un usuario primero");
-                  return;
-                }
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  if (!selectedUser || !selectedUserData) {
+                    toast.error("Seleccione un usuario");
+                    return;
+                  }
 
-                try {
+                  try {
+                    const raw = selectedUserData.raw as CamperData;
+                    const data = prepareUnifiedData(raw, { pagare, fechaContrato });
+
+                    await generateContract(
+                      "/contratos/Condiciones Específicas-Financiación Lumni- Mayor de Edad.docx",
+                      data,
+                      `Contrato_Lumni_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.docx`
+                    );
+
+                    toast.success("Archivo Word generado");
+                  } catch (error: any) {
+                    toast.error(`Error: ${error.message}`);
+                  }
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>WORD</span>
+              </button>
+
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  if (!selectedUser || !selectedUserData) {
+                    toast.error("Seleccione un usuario");
+                    return;
+                  }
                   const raw = selectedUserData.raw as CamperData;
-                  const data = prepareUnifiedData(raw, { pagare, fechaContrato });
+                  const fileName = `Contrato_Lumni_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.pdf`;
 
-                  await generateContract(
-                    "/contratos/Condiciones Específicas-Financiación Lumni- Mayor de Edad.docx",
-                    data,
-                    `Contrato_Lumni_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.docx`
-                  );
-
-                  toast.success("Contrato generado exitosamente");
-                } catch (error: any) {
-                  toast.error(`Error al generar el contrato: ${error.message || "Error desconocido"}`);
-                }
-              }}
-              disabled={!selectedUser}
-            >
-              <FileDown className="w-5 h-5" />
-              <span>DESCARGAR EN PDF</span>
-            </button>
+                  toast.promise(downloadAsPDF("docx-reader-container", fileName), {
+                    loading: 'Generando PDF...',
+                    success: 'PDF descargado',
+                    error: (err) => `Error: ${err.message}`
+                  });
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>PDF</span>
+              </button>
+            </div>
 
             <button
               className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"

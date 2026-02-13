@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
 import { FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
 import DocxViewer from "@/components/DocxViewer";
-import { generateContract, prepareUnifiedData } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
@@ -14,11 +14,40 @@ const RPMayores = () => {
     // Campos del contrato
     const [pagare, setPagare] = useState("");
     const [fechaContrato, setFechaContrato] = useState("");
-    const [cuotas, setCuotas] = useState("");
+    const [cuotas, setCuotas] = useState("1");
+    const [modoPago, setModoPago] = useState<'auto' | 'manual'>('auto');
+    const [manualCuotas, setManualCuotas] = useState<number[]>([13000000]);
 
     const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
     const selectedUserData = users.find((u) => u.id === selectedUser);
+
+    const TOTAL_OBJETIVO = 13000000;
+    const sumaManual = manualCuotas.reduce((acc, val) => acc + (val || 0), 0);
+
+    const handleNumCuotasChange = (val: string) => {
+        setCuotas(val);
+        const n = parseInt(val) || 1;
+        if (modoPago === 'manual') {
+            const newCuotas = [...manualCuotas];
+            if (n > newCuotas.length) {
+                // Agregar nuevas cuotas (valor 0 por defecto)
+                for (let i = newCuotas.length; i < n; i++) {
+                    newCuotas.push(0);
+                }
+            } else if (n < newCuotas.length) {
+                // Eliminar cuotas sobrantes
+                newCuotas.length = n;
+            }
+            setManualCuotas(newCuotas);
+        }
+    };
+
+    const handleManualValueChange = (index: number, value: string) => {
+        const newCuotas = [...manualCuotas];
+        newCuotas[index] = parseInt(value) || 0;
+        setManualCuotas(newCuotas);
+    };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -32,7 +61,7 @@ const RPMayores = () => {
                 representative: {
                     name: item.nombreRepresentante,
                     cedula: item.cedulaRepresentante,
-                    email: item.emailRepresentante, // Used for camper in adults
+                    email: item.emailRepresentante,
                 },
                 raw: item
             }));
@@ -51,10 +80,22 @@ const RPMayores = () => {
             return;
         }
 
+        if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
+            toast.error(`La suma total de las cuotas debe ser exactamente ${TOTAL_OBJETIVO.toLocaleString()}. Actualmente: ${sumaManual.toLocaleString()}`);
+            return;
+        }
+
         try {
             const raw = selectedUserData.raw as CamperData;
 
-            const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, isRP: true });
+            const data = prepareUnifiedData(raw, {
+                pagare,
+                fechaContrato,
+                cuotas,
+                modoPago,
+                manualCuotas,
+                isRP: true
+            });
 
             const blob = await generateContract(
                 "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
@@ -66,9 +107,9 @@ const RPMayores = () => {
                 setPreviewBlob(blob);
                 toast.success("Vista previa actualizada");
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Error al generar vista previa");
+            toast.error(`Error al generar vista previa: ${error.message || "Error desconocido"}`);
         }
     };
 
@@ -80,7 +121,7 @@ const RPMayores = () => {
                 {/* Form Panel */}
                 <div className="w-[400px] form-panel border-r border-border overflow-y-auto flex flex-col">
                     <div className="flex-1">
-                        <div className="mb-8">
+                        <div className="mb-4">
                             <h2 className="text-2xl font-bold text-foreground mb-2">
                                 Recursos Propios Mayores
                             </h2>
@@ -89,7 +130,7 @@ const RPMayores = () => {
                             </p>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {/* Excel Upload */}
                             <div className="p-4 border-2 border-dashed border-muted-foreground/25 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors text-center">
                                 <input
@@ -102,14 +143,13 @@ const RPMayores = () => {
                                 <label htmlFor="excel-upload" className="cursor-pointer flex flex-col items-center gap-2">
                                     <FileSpreadsheet className="w-8 h-8 text-green-600" />
                                     <span className="text-sm font-medium">Cargar Excel de Campers</span>
-                                    <span className="text-xs text-muted-foreground">(.xlsx, .xls)</span>
                                 </label>
                             </div>
 
                             {users.length > 0 && (
                                 <div>
-                                    <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                                        SELECCIONE EL CAMPER ({users.length} disponibles)
+                                    <label className="block text-[10px] font-bold text-foreground mb-1 tracking-wider uppercase">
+                                        Camper ({users.length})
                                     </label>
                                     <UserSelector
                                         value={selectedUser}
@@ -117,119 +157,211 @@ const RPMayores = () => {
                                         users={users}
                                     />
                                     {selectedUserData && (
-                                        <div className="mt-2 text-xs text-muted-foreground bg-secondary/50 p-3 rounded space-y-1">
+                                        <div className="mt-1 text-[10px] text-muted-foreground bg-secondary/30 p-2 rounded">
                                             <p><strong>Cédula:</strong> {selectedUserData.raw.documentoCamper}</p>
                                             <p><strong>Email:</strong> {selectedUserData.raw.emailRepresentante}</p>
-                                            <p><strong>Dirección:</strong> {selectedUserData.raw.direccionCamper}</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            <div>
-                                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                                    NÚMERO DE PAGARÉ
-                                </label>
-                                <input
-                                    type="text"
-                                    value={pagare}
-                                    onChange={(e) => setPagare(e.target.value)}
-                                    className="w-full p-2 rounded-md border border-input bg-background"
-                                    placeholder="Ingrese número de pagaré"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-foreground mb-1 tracking-wider uppercase">
+                                        Pagaré
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={pagare}
+                                        onChange={(e) => setPagare(e.target.value)}
+                                        className="w-full p-2 text-sm rounded-md border border-input bg-background"
+                                        placeholder="#"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-foreground mb-1 tracking-wider uppercase">
+                                        Fecha
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={fechaContrato}
+                                        onChange={(e) => setFechaContrato(e.target.value)}
+                                        className="w-full p-2 text-sm rounded-md border border-input bg-background"
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                                    FECHA DEL CONTRATO
+                            {/* Plan de Pagos */}
+                            <div className="p-3 bg-secondary/20 rounded-lg border border-border">
+                                <label className="block text-[10px] font-bold text-foreground mb-2 tracking-wider uppercase">
+                                    PLAN DE PAGOS (Total 13M)
                                 </label>
-                                <input
-                                    type="date"
-                                    value={fechaContrato}
-                                    onChange={(e) => setFechaContrato(e.target.value)}
-                                    className="w-full p-2 rounded-md border border-input bg-background"
-                                />
-                            </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-foreground mb-2 tracking-wider">
-                                    NÚMERO DE CUOTAS
-                                </label>
-                                <input
-                                    type="number"
-                                    value={cuotas}
-                                    onChange={(e) => setCuotas(e.target.value)}
-                                    className="w-full p-2 rounded-md border border-input bg-background"
-                                    placeholder="Ej: 12"
-                                />
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        className={`flex-1 py-1.5 text-xs rounded border ${modoPago === 'auto' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input'}`}
+                                        onClick={() => setModoPago('auto')}
+                                    >
+                                        Automático
+                                    </button>
+                                    <button
+                                        className={`flex-1 py-1.5 text-xs rounded border ${modoPago === 'manual' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input'}`}
+                                        onClick={() => {
+                                            setModoPago('manual');
+                                            if (manualCuotas.length !== parseInt(cuotas)) {
+                                                const n = parseInt(cuotas) || 1;
+                                                const v = Math.floor(TOTAL_OBJETIVO / n);
+                                                const arr = Array(n).fill(v);
+                                                arr[n - 1] = TOTAL_OBJETIVO - (v * (n - 1));
+                                                setManualCuotas(arr);
+                                            }
+                                        }}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-[10px] text-muted-foreground mb-1 uppercase">Cant. Cuotas</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={cuotas}
+                                            onChange={(e) => handleNumCuotasChange(e.target.value)}
+                                            className="w-full p-2 text-sm rounded-md border border-input bg-background"
+                                        />
+                                    </div>
+
+                                    {modoPago === 'manual' && (
+                                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                            {manualCuotas.map((valor, idx) => (
+                                                <div key={idx} className="flex flex-col gap-1">
+                                                    <label className="text-[9px] text-muted-foreground uppercase">{idx === 0 ? 'CUOTA 1' : `Cuota ${idx + 1}`}</label>
+                                                    <input
+                                                        type="number"
+                                                        value={valor}
+                                                        onChange={(e) => handleManualValueChange(idx, e.target.value)}
+                                                        className="w-full p-1.5 text-xs rounded border border-input bg-background"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {modoPago === 'manual' && (
+                                        <div className={`text-center p-2 rounded text-xs font-bold ${sumaManual === TOTAL_OBJETIVO ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            Total: ${sumaManual.toLocaleString()} / 13,000,000
+                                            {sumaManual !== TOTAL_OBJETIVO && (
+                                                <p className="font-normal text-[10px] mt-1">
+                                                    {sumaManual > TOTAL_OBJETIVO ? `Excede por: $${(sumaManual - TOTAL_OBJETIVO).toLocaleString()}` : `Falta: $${(TOTAL_OBJETIVO - sumaManual).toLocaleString()}`}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         <button
-                            className="secondary-button mt-8 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+                            className="secondary-button mt-6 w-full p-2.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 text-sm font-bold"
                             onClick={handePreview}
                             disabled={!selectedUser}
                         >
-                            <FileText className="w-5 h-5" />
+                            <FileText className="w-4 h-4" />
                             <span>ACTUALIZAR VISTA PREVIA</span>
                         </button>
 
-                        <button
-                            className="primary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={async () => {
-                                if (!selectedUser || !selectedUserData) {
-                                    toast.error("Por favor seleccione un usuario primero");
-                                    return;
-                                }
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            <button
+                                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                                onClick={async () => {
+                                    if (!selectedUser || !selectedUserData) {
+                                        toast.error("Seleccione un usuario");
+                                        return;
+                                    }
+                                    if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
+                                        toast.error("La suma debe ser 13M");
+                                        return;
+                                    }
 
-                                try {
+                                    try {
+                                        const raw = selectedUserData.raw as CamperData;
+                                        const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isRP: true });
+
+                                        await generateContract(
+                                            "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
+                                            data,
+                                            `Contrato_RP_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.docx`
+                                        );
+
+                                        toast.success("Archivo Word generado");
+                                    } catch (error: any) {
+                                        toast.error(`Error: ${error.message}`);
+                                    }
+                                }}
+                                disabled={!selectedUser}
+                            >
+                                <FileDown className="w-4 h-4" />
+                                <span>WORD</span>
+                            </button>
+
+                            <button
+                                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                                onClick={async () => {
+                                    if (!selectedUser || !selectedUserData) {
+                                        toast.error("Seleccione un usuario");
+                                        return;
+                                    }
                                     const raw = selectedUserData.raw as CamperData;
-                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, isRP: true });
+                                    const fileName = `Contrato_RP_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.pdf`;
 
-                                    await generateContract(
-                                        "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
-                                        data,
-                                        `Contrato_RP_Mayores_${raw.nombreCamper.replace(/\s+/g, '_')}.docx`
-                                    );
+                                    toast.promise(downloadAsPDF("docx-reader-container", fileName), {
+                                        loading: 'Generando PDF...',
+                                        success: 'PDF descargado correctamente',
+                                        error: (err) => `Error al generar PDF: ${err.message}`
+                                    });
+                                }}
+                                disabled={!selectedUser}
+                            >
+                                <FileDown className="w-4 h-4" />
+                                <span>PDF</span>
+                            </button>
+                        </div>
 
-                                    toast.success("Contrato generado exitosamente");
-                                } catch (error) {
-                                    toast.error("Error al generar el contrato");
-                                }
-                            }}
-                            disabled={!selectedUser}
-                        >
-                            <FileDown className="w-5 h-5" />
-                            <span>DESCARGAR EN PDF</span>
-                        </button>
+                        <div className="mt-2">
+                            <button
+                                className="secondary-button flex items-center justify-center gap-2 w-full p-2.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 text-sm font-bold"
+                                disabled={!selectedUser}
+                                onClick={async () => {
+                                    if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
+                                        toast.error("La suma debe ser 13M");
+                                        return;
+                                    }
+                                    const raw = selectedUserData.raw as CamperData;
+                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isRP: true });
 
-                        <button
-                            className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                            disabled={!selectedUser}
-                            onClick={async () => {
-                                const raw = selectedUserData.raw as CamperData;
-                                const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, isRP: true });
+                                    toast.promise(async () => {
+                                        const blob = await generateContract(
+                                            "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
+                                            data,
+                                            "contrato.docx",
+                                            true
+                                        );
 
-                                toast.promise(async () => {
-                                    const blob = await generateContract(
-                                        "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
-                                        data,
-                                        "contrato.docx",
-                                        true
-                                    );
-
-                                    const url = await uploadToZapSign(blob as Blob, `Contrato_RP_${raw.nombreCamper}.docx`);
-                                    window.open(url, '_blank');
-                                }, {
-                                    loading: 'Subiendo contrato a ZapSign...',
-                                    success: 'Contrato subido. Se abrirá ZapSign para finalizar.',
-                                    error: (err) => `No se pudo enviar a ZapSign: ${err.message}`
-                                });
-                            }}
-                        >
-                            <Mail className="w-5 h-5" />
-                            <span>ENVIAR CORREO</span>
-                        </button>
+                                        const url = await uploadToZapSign(blob as Blob, `Contrato_RP_${raw.nombreCamper}.docx`);
+                                        window.open(url, '_blank');
+                                    }, {
+                                        loading: 'Subiendo...',
+                                        success: 'Enviado a ZapSign',
+                                        error: (err) => `Error: ${err.message}`
+                                    });
+                                }}
+                            >
+                                <Mail className="w-4 h-4" />
+                                <span>ZAPSIGN</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

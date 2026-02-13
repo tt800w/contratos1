@@ -27,23 +27,25 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     // Lógica específica para Recursos Propios
     if (extraData.isRP) {
         const TOTAL_RP = 13000000;
-        const PRIMER_PAGO = 3400000;
 
-        const primerPagoTexto = `PRIMER PAGO: ${formatCurrencySpanish(PRIMER_PAGO)} al momento de la firma del presente documento.`;
-
-        if (numCuotasTotal > 1) {
-            const saldoRestante = TOTAL_RP - PRIMER_PAGO;
-            const cuotasRestantes = numCuotasTotal - 1;
-            const valorCuotaRestante = Math.floor(saldoRestante / cuotasRestantes);
-            const ajusteUltimaCuota = saldoRestante - (valorCuotaRestante * (cuotasRestantes - 1));
-
-            planPagos = primerPagoTexto + "\n";
-            for (let i = 2; i <= numCuotasTotal; i++) {
-                const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuotaRestante;
-                planPagos += `CUOTA ${i}: ${formatCurrencySpanish(valorAUsar)}.\n`;
-            }
+        if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
+            // Modo Manual: Usar los valores proporcionados uno a uno
+            planPagos = "";
+            extraData.manualCuotas.forEach((valor: number, index: number) => {
+                const label = index === 0 ? "CUOTA 1" : `CUOTA ${index + 1}`;
+                planPagos += `${label}: ${formatCurrencySpanish(valor)} al momento de la firma del presente documento.\n`;
+            });
         } else {
-            planPagos = primerPagoTexto;
+            // Modo Automático (Default): Dividir 13M entre el número de cuotas de forma equitativa
+            const valorCuota = Math.floor(TOTAL_RP / numCuotasTotal);
+            const ajusteUltimaCuota = TOTAL_RP - (valorCuota * (numCuotasTotal - 1));
+
+            planPagos = "";
+            for (let i = 1; i <= numCuotasTotal; i++) {
+                const label = i === 1 ? "CUOTA 1" : `CUOTA ${i}`;
+                const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuota;
+                planPagos += `${label}: ${formatCurrencySpanish(valorAUsar)} al momento de la firma del presente documento.\n`;
+            }
         }
     }
 
@@ -176,5 +178,56 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
         console.error('Error al generar el contrato:', error);
         // Throw the specific error message so it can be shown to the user
         throw new Error(error.message || "Error desconocido al generar contrato");
+    }
+};
+
+/**
+ * Genera un PDF a partir del contenido renderizado en el DOM.
+ * Requiere que la librería html2pdf.js esté instalada/disponible.
+ */
+export const downloadAsPDF = async (elementId: string, outputName: string) => {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        throw new Error("No se encontró el elemento para generar el PDF");
+    }
+
+    // Guardar el transform original para restaurarlo luego
+    const originalTransform = element.style.transform;
+    const originalTransition = element.style.transition;
+
+    try {
+        // Desactivar animaciones y transformaciones para una captura limpia
+        element.style.transition = 'none';
+        element.style.transform = 'none';
+
+        // @ts-ignore
+        const html2pdf = (await import('html2pdf.js')).default;
+
+        const opt = {
+            margin: 0, // Los márgenes se manejan en el CSS del documento
+            filename: outputName,
+            image: { type: 'jpeg' as const, quality: 1.0 },
+            html2canvas: {
+                scale: 3, // 3 es suficiente para nitidez y evita archivos gigantes
+                useCORS: true,
+                logging: false,
+                letterRendering: true,
+                allowTaint: true
+            },
+            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
+            pagebreak: { mode: 'css', after: 'section' } // Forzar salto después de cada sección (página)
+        };
+
+        await html2pdf().set(opt).from(element).save();
+
+        // Restaurar estado original
+        element.style.transform = originalTransform;
+        element.style.transition = originalTransition;
+        return true;
+    } catch (error: any) {
+        element.style.transform = originalTransform;
+        element.style.transition = originalTransition;
+        console.error('Error al generar PDF:', error);
+        throw new Error("Error al generar PDF. Intente de nuevo.");
     }
 };

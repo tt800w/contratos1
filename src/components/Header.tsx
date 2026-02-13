@@ -1,13 +1,12 @@
-import { ArrowLeft, Rocket } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   showBack?: boolean;
   title?: string;
-  subtitle?: string;
 }
 
-const Header = ({ showBack = false, title, subtitle }: HeaderProps) => {
+const Header = ({ showBack = false, title }: HeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -24,14 +23,14 @@ const Header = ({ showBack = false, title, subtitle }: HeaderProps) => {
         ) : (
           <div className="flex items-center gap-3">
             <div className="text-primary">
-              <Rocket className="w-6 h-6" />
+              <img src="/Logocamp.png" alt="Logo" className="w-8 h-8 object-contain" />
             </div>
             <span className="text-lg font-bold tracking-wide">CAMPUSLANDS</span>
           </div>
         )}
 
         <div className="flex items-center gap-3">
-          <Rocket className="w-5 h-5 text-primary" />
+          <img src="/Logocamp.png" alt="Logo Small" className="w-6 h-6 object-contain opacity-80" />
         </div>
 
         <div className="text-xs font-medium tracking-wider text-muted-foreground">

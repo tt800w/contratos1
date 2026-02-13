@@ -1,9 +1,9 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import UserSelector from "@/components/UserSelector";
-import { Upload, FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
+import { FileDown, Mail, FileText, FileSpreadsheet } from "lucide-react";
 import DocxViewer from "@/components/DocxViewer";
-import { generateContract, prepareUnifiedData } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
@@ -168,32 +168,56 @@ const LumniMenores = () => {
               <span>ACTUALIZAR VISTA PREVIA</span>
             </button>
 
-            <button
-              className="primary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={async () => {
-                const data = prepareContractData();
-                if (!data) {
-                  toast.error("Por favor complete los datos requeridos");
-                  return;
-                }
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  const data = prepareContractData();
+                  if (!data) {
+                    toast.error("Complete los datos requeridos");
+                    return;
+                  }
 
-                try {
-                  await generateContract(
-                    "/contratos/Condiciones Específicas-Financiación Lumni- Menor de Edad.docx",
-                    data,
-                    `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.docx`
-                  );
+                  try {
+                    await generateContract(
+                      "/contratos/Condiciones Específicas-Financiación Lumni- Menor de Edad.docx",
+                      data,
+                      `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.docx`
+                    );
 
-                  toast.success("Contrato generado exitosamente");
-                } catch (error: any) {
-                  toast.error(`Error al generar el contrato: ${error.message || "Error desconocido"}`);
-                }
-              }}
-              disabled={!selectedUser}
-            >
-              <FileDown className="w-5 h-5" />
-              <span>DESCARGAR EN PDF</span>
-            </button>
+                    toast.success("Archivo Word generado");
+                  } catch (error: any) {
+                    toast.error(`Error: ${error.message}`);
+                  }
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>WORD</span>
+              </button>
+
+              <button
+                className="primary-button flex items-center justify-center gap-2 p-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 text-xs font-bold"
+                onClick={async () => {
+                  const data = prepareContractData();
+                  if (!data) {
+                    toast.error("Complete el previo primero");
+                    return;
+                  }
+                  const fileName = `Contrato_Lumni_Menores_${data["NOMBRE DEL CAMPER"].replace(/\s+/g, '_')}.pdf`;
+
+                  toast.promise(downloadAsPDF("docx-reader-container", fileName), {
+                    loading: 'Generando PDF...',
+                    success: 'PDF descargado',
+                    error: (err) => `Error: ${err.message}`
+                  });
+                }}
+                disabled={!selectedUser}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>PDF</span>
+              </button>
+            </div>
 
             <button
               className="secondary-button mt-4 flex items-center justify-center gap-2 w-full p-3 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
