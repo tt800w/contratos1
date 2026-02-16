@@ -29,9 +29,8 @@ const Header = ({ showBack = false, title }: HeaderProps) => {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <img src="/Logocamp.png" alt="Logo Small" className="w-6 h-6 object-contain opacity-80" />
-        </div>
+        {/* Center spacing or empty div if needed */}
+        <div></div>
 
         <div className="text-xs font-medium tracking-wider text-muted-foreground">
           {title || "AUTOMATIZACIÓN DE CONTRATOS"}

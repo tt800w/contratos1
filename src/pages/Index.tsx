@@ -6,6 +6,8 @@ const contracts = [
   { title: "Lumni Mayores de edad", route: "/lumni-mayores" },
   { title: "Recursos Propios Menores de edad", route: "/rp-menores" },
   { title: "Recursos Propios Mayores de edad", route: "/rp-mayores" },
+  { title: "Pronto Pago Menores de edad", route: "/pp-menores" },
+  { title: "Pronto Pago Mayores de edad", route: "/pp-mayores" },
 ];
 
 const Index = () => {
@@ -47,6 +49,23 @@ const Index = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {contracts.filter(c => c.title.includes("Recursos Propios")).map((contract, index) => (
+                <ContractCard
+                  key={index}
+                  title={contract.title}
+                  route={contract.route}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Sección Pronto Pago */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-primary"></span>
+              CONTRATOS PRONTO PAGO
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {contracts.filter(c => c.title.includes("Pronto Pago")).map((contract, index) => (
                 <ContractCard
                   key={index}
                   title={contract.title}

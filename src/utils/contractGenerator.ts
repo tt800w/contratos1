@@ -24,9 +24,9 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const numCuotasTotal = parseInt(extraData.cuotas) || 1;
     let planPagos = "";
 
-    // Lógica específica para Recursos Propios
-    if (extraData.isRP) {
-        const TOTAL_RP = 13000000;
+    // Lógica específica para Recursos Propios y Pronto Pago
+    if (extraData.isRP || extraData.isPP) {
+        const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : 13000000;
 
         if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
             // Modo Manual: Usar los valores proporcionados uno a uno
@@ -36,9 +36,9 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
                 planPagos += `${label}: ${formatCurrencySpanish(valor)} al momento de la firma del presente documento.\n`;
             });
         } else {
-            // Modo Automático (Default): Dividir 13M entre el número de cuotas de forma equitativa
-            const valorCuota = Math.floor(TOTAL_RP / numCuotasTotal);
-            const ajusteUltimaCuota = TOTAL_RP - (valorCuota * (numCuotasTotal - 1));
+            // Modo Automático (Default): Dividir el total entre el número de cuotas de forma equitativa
+            const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
+            const ajusteUltimaCuota = TOTAL_OBJETIVO - (valorCuota * (numCuotasTotal - 1));
 
             planPagos = "";
             for (let i = 1; i <= numCuotasTotal; i++) {
