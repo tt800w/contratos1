@@ -17,6 +17,7 @@ const RPMenores = () => {
     const [cuotas, setCuotas] = useState("1");
     const [modoPago, setModoPago] = useState<'auto' | 'manual'>('auto');
     const [manualCuotas, setManualCuotas] = useState<number[]>([13000000]);
+    const [fechasCuotas, setFechasCuotas] = useState<string[]>([""]);
 
     const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
@@ -28,6 +29,16 @@ const RPMenores = () => {
     const handleNumCuotasChange = (val: string) => {
         setCuotas(val);
         const n = parseInt(val) || 1;
+
+        // Sincronizar fechasCuotas
+        const newFechas = [...fechasCuotas];
+        if (n > newFechas.length) {
+            for (let i = newFechas.length; i < n; i++) newFechas.push("");
+        } else if (n < newFechas.length) {
+            newFechas.length = n;
+        }
+        setFechasCuotas(newFechas);
+
         if (modoPago === 'manual') {
             const newCuotas = [...manualCuotas];
             if (n > newCuotas.length) {
@@ -47,6 +58,12 @@ const RPMenores = () => {
         const newCuotas = [...manualCuotas];
         newCuotas[index] = parseInt(value) || 0;
         setManualCuotas(newCuotas);
+    };
+
+    const handleFechaChange = (index: number, value: string) => {
+        const newFechas = [...fechasCuotas];
+        newFechas[index] = value;
+        setFechasCuotas(newFechas);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +112,7 @@ const RPMenores = () => {
                 cuotas,
                 modoPago,
                 manualCuotas,
+                fechasCuotas,
                 isRP: true
             });
 
@@ -235,17 +253,48 @@ const RPMenores = () => {
                                         />
                                     </div>
 
-                                    {modoPago === 'manual' && (
+                                    {modoPago === 'auto' && (
                                         <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                                            {manualCuotas.map((valor, idx) => (
-                                                <div key={idx} className="flex flex-col gap-1">
-                                                    <label className="text-[9px] text-muted-foreground uppercase">{idx === 0 ? 'CUOTA 1' : `CUOTA ${idx + 1}`}</label>
+                                            <p className="text-[10px] text-muted-foreground mb-1 uppercase font-bold text-center">Definir fechas de cuotas</p>
+                                            {fechasCuotas.map((fecha, idx) => (
+                                                <div key={idx} className="flex flex-col gap-1 p-2 border border-border rounded bg-muted/10">
+                                                    <label className="text-[8px] text-muted-foreground uppercase">{idx === 0 ? 'CUOTA 1 (Firma)' : `CUOTA ${idx + 1}`}</label>
                                                     <input
-                                                        type="number"
-                                                        value={valor}
-                                                        onChange={(e) => handleManualValueChange(idx, e.target.value)}
+                                                        type="date"
+                                                        value={fecha}
+                                                        onChange={(e) => handleFechaChange(idx, e.target.value)}
                                                         className="w-full p-1.5 text-xs rounded border border-input bg-background"
                                                     />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {modoPago === 'manual' && (
+                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                            {manualCuotas.map((valor, idx) => (
+                                                <div key={idx} className="p-2 border border-border rounded bg-muted/30 space-y-2">
+                                                    <label className="text-[9px] font-bold text-muted-foreground uppercase">{idx === 0 ? 'CUOTA 1 (Firma)' : `CUOTA ${idx + 1}`}</label>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[8px] text-muted-foreground uppercase">Valor</label>
+                                                            <input
+                                                                type="number"
+                                                                value={valor}
+                                                                onChange={(e) => handleManualValueChange(idx, e.target.value)}
+                                                                className="w-full p-1.5 text-xs rounded border border-input bg-background"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[8px] text-muted-foreground uppercase">Fecha</label>
+                                                            <input
+                                                                type="date"
+                                                                value={fechasCuotas[idx] || ""}
+                                                                onChange={(e) => handleFechaChange(idx, e.target.value)}
+                                                                className="w-full p-1.5 text-xs rounded border border-input bg-background"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -289,7 +338,7 @@ const RPMenores = () => {
 
                                     try {
                                         const raw = selectedUserData.raw as CamperData;
-                                        const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isRP: true });
+                                        const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true });
 
                                         await generateContract(
                                             "/contratos/Condiciones Específicas-Recursos Propios Menor de Edad.docx",
@@ -341,7 +390,7 @@ const RPMenores = () => {
                                         return;
                                     }
                                     const raw = selectedUserData.raw as CamperData;
-                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isRP: true });
+                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true });
 
                                     toast.promise(async () => {
                                         const blob = await generateContract(

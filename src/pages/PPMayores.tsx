@@ -14,38 +14,10 @@ const PPMayores = () => {
     // Campos del contrato
     const [pagare, setPagare] = useState("");
     const [fechaContrato, setFechaContrato] = useState("");
-    const [cuotas, setCuotas] = useState("1");
-    const [modoPago, setModoPago] = useState<'auto' | 'manual'>('auto');
-    const [manualCuotas, setManualCuotas] = useState<number[]>([12000000]);
 
     const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
     const selectedUserData = users.find((u) => u.id === selectedUser);
-
-    const TOTAL_OBJETIVO = 12000000;
-    const sumaManual = manualCuotas.reduce((acc, val) => acc + (val || 0), 0);
-
-    const handleNumCuotasChange = (val: string) => {
-        setCuotas(val);
-        const n = parseInt(val) || 1;
-        if (modoPago === 'manual') {
-            const newCuotas = [...manualCuotas];
-            if (n > newCuotas.length) {
-                for (let i = newCuotas.length; i < n; i++) {
-                    newCuotas.push(0);
-                }
-            } else if (n < newCuotas.length) {
-                newCuotas.length = n;
-            }
-            setManualCuotas(newCuotas);
-        }
-    };
-
-    const handleManualValueChange = (index: number, value: string) => {
-        const newCuotas = [...manualCuotas];
-        newCuotas[index] = parseInt(value) || 0;
-        setManualCuotas(newCuotas);
-    };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -79,20 +51,12 @@ const PPMayores = () => {
             return;
         }
 
-        if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
-            toast.error(`La suma total de las cuotas debe ser exactamente ${TOTAL_OBJETIVO.toLocaleString()}. Actualmente: ${sumaManual.toLocaleString()}`);
-            return;
-        }
-
         try {
             const raw = selectedUserData.raw as CamperData;
 
             const data = prepareUnifiedData(raw, {
                 pagare,
                 fechaContrato,
-                cuotas,
-                modoPago,
-                manualCuotas,
                 isPP: true
             });
 
@@ -187,75 +151,6 @@ const PPMayores = () => {
                                 </div>
                             </div>
 
-                            <div className="p-3 bg-secondary/20 rounded-lg border border-border">
-                                <label className="block text-[10px] font-bold text-foreground mb-2 tracking-wider uppercase">
-                                    PLAN DE PAGOS (Total 12M)
-                                </label>
-
-                                <div className="flex gap-2 mb-3">
-                                    <button
-                                        className={`flex-1 py-1.5 text-xs rounded border ${modoPago === 'auto' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input'}`}
-                                        onClick={() => setModoPago('auto')}
-                                    >
-                                        Automático
-                                    </button>
-                                    <button
-                                        className={`flex-1 py-1.5 text-xs rounded border ${modoPago === 'manual' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input'}`}
-                                        onClick={() => {
-                                            setModoPago('manual');
-                                            if (manualCuotas.length !== parseInt(cuotas)) {
-                                                const n = parseInt(cuotas) || 1;
-                                                const v = Math.floor(TOTAL_OBJETIVO / n);
-                                                const arr = Array(n).fill(v);
-                                                arr[n - 1] = TOTAL_OBJETIVO - (v * (n - 1));
-                                                setManualCuotas(arr);
-                                            }
-                                        }}
-                                    >
-                                        Manual
-                                    </button>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-[10px] text-muted-foreground mb-1 uppercase">Cant. Cuotas</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={cuotas}
-                                            onChange={(e) => handleNumCuotasChange(e.target.value)}
-                                            className="w-full p-2 text-sm rounded-md border border-input bg-background"
-                                        />
-                                    </div>
-
-                                    {modoPago === 'manual' && (
-                                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                                            {manualCuotas.map((valor, idx) => (
-                                                <div key={idx} className="flex flex-col gap-1">
-                                                    <label className="text-[9px] text-muted-foreground uppercase">{idx === 0 ? 'CUOTA 1' : `CUOTA ${idx + 1}`}</label>
-                                                    <input
-                                                        type="number"
-                                                        value={valor}
-                                                        onChange={(e) => handleManualValueChange(idx, e.target.value)}
-                                                        className="w-full p-1.5 text-xs rounded border border-input bg-background"
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {modoPago === 'manual' && (
-                                        <div className={`text-center p-2 rounded text-xs font-bold ${sumaManual === TOTAL_OBJETIVO ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            Total: ${sumaManual.toLocaleString()} / 12,000,000
-                                            {sumaManual !== TOTAL_OBJETIVO && (
-                                                <p className="font-normal text-[10px] mt-1">
-                                                    {sumaManual > TOTAL_OBJETIVO ? `Excede por: $${(sumaManual - TOTAL_OBJETIVO).toLocaleString()}` : `Falta: $${(TOTAL_OBJETIVO - sumaManual).toLocaleString()}`}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </div>
 
                         <button
@@ -275,14 +170,9 @@ const PPMayores = () => {
                                         toast.error("Seleccione un usuario");
                                         return;
                                     }
-                                    if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
-                                        toast.error("La suma debe ser 12M");
-                                        return;
-                                    }
-
                                     try {
                                         const raw = selectedUserData.raw as CamperData;
-                                        const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isPP: true });
+                                        const data = prepareUnifiedData(raw, { pagare, fechaContrato, isPP: true });
 
                                         await generateContract(
                                             "/contratos/Condiciones Específicas-Pronto Pago Mayor de Edad.docx",
@@ -329,12 +219,8 @@ const PPMayores = () => {
                                 className="secondary-button flex items-center justify-center gap-2 w-full p-2.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 text-sm font-bold"
                                 disabled={!selectedUser}
                                 onClick={async () => {
-                                    if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
-                                        toast.error("La suma debe ser 12M");
-                                        return;
-                                    }
                                     const raw = selectedUserData.raw as CamperData;
-                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, cuotas, modoPago, manualCuotas, isPP: true });
+                                    const data = prepareUnifiedData(raw, { pagare, fechaContrato, isPP: true });
 
                                     toast.promise(async () => {
                                         const blob = await generateContract(

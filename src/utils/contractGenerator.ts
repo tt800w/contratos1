@@ -21,22 +21,28 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const mes = meses[fechaObj.getMonth()];
     const ano = fechaObj.getFullYear().toString();
 
-    const numCuotasTotal = parseInt(extraData.cuotas) || 1;
+    const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
     let planPagos = "";
 
     // Lógica específica para Recursos Propios y Pronto Pago
     if (extraData.isRP || extraData.isPP) {
         const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : 13000000;
 
-        if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
-            // Modo Manual: Usar los valores proporcionados uno a uno
+        if (extraData.isPP) {
+            // Mensaje por defecto para Pronto Pago sin prefijo de "CUOTA 1"
+            planPagos = `${formatCurrencySpanish(TOTAL_OBJETIVO)} al momento de la firma del presente documento.`;
+        } else if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
+            // Modo Manual (Solo para RP)
             planPagos = "";
             extraData.manualCuotas.forEach((valor: number, index: number) => {
                 const label = index === 0 ? "CUOTA 1" : `CUOTA ${index + 1}`;
-                planPagos += `${label}: ${formatCurrencySpanish(valor)} al momento de la firma del presente documento.\n`;
+                const fecha = extraData.fechasCuotas?.[index];
+                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+
+                planPagos += `${label}: ${formatCurrencySpanish(valor)} ${fechaTexto}al momento de la firma del presente documento.\n`;
             });
         } else {
-            // Modo Automático (Default): Dividir el total entre el número de cuotas de forma equitativa
+            // Modo Automático (Default para RP): Dividir el presupuesto
             const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
             const ajusteUltimaCuota = TOTAL_OBJETIVO - (valorCuota * (numCuotasTotal - 1));
 
@@ -44,7 +50,10 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
             for (let i = 1; i <= numCuotasTotal; i++) {
                 const label = i === 1 ? "CUOTA 1" : `CUOTA ${i}`;
                 const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuota;
-                planPagos += `${label}: ${formatCurrencySpanish(valorAUsar)} al momento de la firma del presente documento.\n`;
+                const fecha = extraData.fechasCuotas?.[i - 1];
+                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+
+                planPagos += `${label}: ${formatCurrencySpanish(valorAUsar)} ${fechaTexto}al momento de la firma del presente documento.\n`;
             }
         }
     }
@@ -88,8 +97,8 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         // Additional fields
         "NUMERO DE PAGARE": extraData.pagare || '',
         "PAGARE": extraData.pagare || '',
-        "numero_cuotas": extraData.cuotas || '',
-        "CUOTAS": extraData.cuotas || '',
+        "numero_cuotas": extraData.isPP ? "1" : (extraData.cuotas || ''),
+        "CUOTAS": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "PLAN_PAGOS": planPagos,
 
         // Include everything from extraData just in case
