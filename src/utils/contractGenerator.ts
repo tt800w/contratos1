@@ -69,7 +69,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
         "DIRECCION": raw.direccionCamper,
 
-        "EMAIL CAMPER": raw.emailRepresentante,
+        "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante,
         "EMAIL REP CAMPER": raw.emailRepresentante,
         "CORREO": raw.emailRepresentante,
 
@@ -200,42 +200,52 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
         throw new Error("No se encontró el elemento para generar el PDF");
     }
 
+    // Wait a bit for any pending renders
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Guardar el transform original para restaurarlo luego
     const originalTransform = element.style.transform;
     const originalTransition = element.style.transition;
+    const originalVisibility = element.style.visibility;
 
     try {
         // Desactivar animaciones y transformaciones para una captura limpia
         element.style.transition = 'none';
         element.style.transform = 'none';
+        element.style.visibility = 'visible';
 
         // @ts-ignore
         const html2pdf = (await import('html2pdf.js')).default;
 
         const opt = {
-            margin: 0, // Los márgenes se manejan en el CSS del documento
+            margin: 0,
             filename: outputName,
-            image: { type: 'jpeg' as const, quality: 1.0 },
+            image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: {
-                scale: 3, // 3 es suficiente para nitidez y evita archivos gigantes
+                scale: 2, // 2 es suficiente y más estable que 3
                 useCORS: true,
                 logging: false,
                 letterRendering: true,
-                allowTaint: true
+                allowTaint: false,
+                scrollY: 0,
+                scrollX: 0
             },
             jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
-            pagebreak: { mode: 'css', after: 'section' } // Forzar salto después de cada sección (página)
+            pagebreak: { mode: ['css', 'legacy'], after: 'section' }
         };
 
-        await html2pdf().set(opt).from(element).save();
+        const doc = html2pdf().set(opt).from(element);
+        await doc.save();
 
         // Restaurar estado original
         element.style.transform = originalTransform;
         element.style.transition = originalTransition;
+        element.style.visibility = originalVisibility;
         return true;
     } catch (error: any) {
         element.style.transform = originalTransform;
         element.style.transition = originalTransition;
+        element.style.visibility = originalVisibility;
         console.error('Error al generar PDF:', error);
         throw new Error("Error al generar PDF. Intente de nuevo.");
     }

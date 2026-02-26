@@ -8,6 +8,7 @@ export interface CamperData {
     documentoCamper: string;
     direccionCamper: string;
     emailRepresentante: string;
+    emailCamper: string;
     celularCamper: string;
     telefonoRepresentante: string;
 }
@@ -41,16 +42,21 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
 
                 console.log("Excel Headers (First Row keys):", Object.keys(jsonData[0] || {}));
 
-                const parsedData: CamperData[] = jsonData.map((row: any) => ({
-                    nombreRepresentante: getValue(row, ['Nombre y apellido del acudiente', 'Nombre completo representante', 'Nombre Representante', 'Acudiente']),
-                    cedulaRepresentante: getValue(row, ['Número de documento del acudiente', 'Número cédula representante', 'Cédula Representante', 'Cedula Representante', 'CC Representante']),
-                    nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
-                    documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
-                    direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion']),
-                    emailRepresentante: getValue(row, ['Dirección de correo electrónico', 'Email representante Camper', 'Email', 'Correo', 'Correo Electrónico', 'EMAIL REP CAMPER']),
-                    celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER']),
-                    telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER']),
-                }));
+                const parsedData: CamperData[] = jsonData.map((row: any) => {
+                    const res = {
+                        nombreRepresentante: getValue(row, ['Nombre y apellido del acudiente', 'Nombre completo representante', 'Nombre Representante', 'Acudiente']),
+                        cedulaRepresentante: getValue(row, ['Número de documento del acudiente', 'Número cédula representante', 'Cédula Representante', 'Cedula Representante', 'CC Representante']),
+                        nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
+                        documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
+                        direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion']),
+                        emailRepresentante: getValue(row, ['Email representante Camper', 'Email acudiente', 'Correo acudiente', 'EMAIL REP CAMPER', 'Dirección de correo electrónico', 'Email', 'Correo', 'Correo Electrónico']),
+                        emailCamper: getValue(row, ['Email Camper', 'Correo Camper', 'Correo Estudiante', 'Email Estudiante']),
+                        celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER']),
+                        telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER']),
+                    };
+                    console.log("Fila mapeada:", res);
+                    return res;
+                });
 
                 resolve(parsedData);
             } catch (error) {

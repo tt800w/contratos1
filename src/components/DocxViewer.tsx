@@ -43,9 +43,25 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                     experimental: true,
                     useBase64URL: true,
                     breakPages: true,
-                    renderHeaders: true,
-                    renderFooters: true,
+                    renderHeaders: false, // Desactivamos los de docx para usar nuestro overlay
+                    renderFooters: false,
                 });
+
+                // Inyectar el overlay en cada sección (página)
+                const sections = containerRef.current.querySelectorAll('section');
+                sections.forEach(section => {
+                    section.classList.add('relative');
+                    section.style.position = 'relative';
+
+                    const overlayContainer = document.createElement('div');
+                    overlayContainer.className = 'brand-overlay-wrapper';
+                    section.appendChild(overlayContainer);
+
+                    // Renderizar el BrandOverlay manualmente o vía portal si fuera React puro, 
+                    // pero como docx-preview inyecta HTML crudo, usaremos un truco de CSS 
+                    // para posicionar un elemento inyectado.
+                });
+
             } catch (error) {
                 console.error("Error displaying document:", error);
                 if (containerRef.current) {
@@ -126,14 +142,72 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
         .docx-render-content section {
           width: 210mm !important;
           min-height: 297mm !important;
-          padding: 2.5cm !important;
+          padding: 4.5cm 2cm 3.5cm 2cm !important; /* Más margen para el overlay superior e inferior */
           margin-bottom: 20px !important;
           background: white !important;
           box-shadow: 0 0 10px rgba(0,0,0,0.2) !important;
           position: relative !important;
           display: block !important;
           box-sizing: border-box !important;
+          overflow: hidden !important;
         }
+
+        /* Overlay Styles */
+        .docx-render-content section::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background-image: 
+                url('/Logocamp.png'),
+                linear-gradient(to right, #82c91e, #82c91e);
+            background-repeat: no-repeat;
+            background-size: 40px auto, 80% 1px;
+            background-position: 40px 40px, center 100px;
+            z-index: 10;
+        }
+
+        /* Header Navy Decoration */
+        .docx-render-content section::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0; 
+            width: 120px; height: 60px;
+            background: #0d1b2a; /* Navy */
+            border-bottom-left-radius: 40px;
+            z-index: 11;
+        }
+
+        /* Footer Decoration Logic (Custom pseudo-elements) */
+        .brand-overlay-wrapper {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 80px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .brand-overlay-wrapper::before {
+            content: "";
+            position: absolute;
+            bottom: 0; left: 0; 
+            width: 100px; height: 50px;
+            background: #0d1b2a;
+            border-top-right-radius: 40px;
+        }
+
+        .brand-overlay-wrapper::after {
+            content: "Km.4, Anillo Vial, Bucaramanga, Santander";
+            position: absolute;
+            bottom: 20px; left: 0; width: 100%;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 0.5px solid #82c91e;
+            padding-top: 10px;
+            margin: 0 40px;
+            width: calc(100% - 80px);
+        }
+
         /* Respetar saltos de página de la librería */
         .docx_page_break {
           display: block !important;
