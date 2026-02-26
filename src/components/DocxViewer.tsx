@@ -21,6 +21,14 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
     useEffect(() => {
         const loadDocx = async () => {
             if (!containerRef.current) return;
+
+            // Si no hay nada que cargar, limpiamos y salimos sin error
+            if (!blob && !url) {
+                containerRef.current.innerHTML = '<div class="p-8 text-muted-foreground text-center">Seleccione un camper y actualice la vista previa para ver el documento.</div>';
+                setIsLoading(false);
+                return;
+            }
+
             setIsLoading(true);
 
             try {
@@ -28,10 +36,12 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
 
                 if (blob) {
                     docData = blob;
-                } else {
+                } else if (url) {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error("Error loading document");
                     docData = await response.blob();
+                } else {
+                    return;
                 }
 
                 containerRef.current.innerHTML = "";
@@ -209,7 +219,7 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
         }
 
         /* Respetar saltos de página de la librería */
-        .docx_page_break {
+        .docx_page_break, .docx-render-content .break-after {
           display: block !important;
           page-break-after: always !important;
           height: 0 !important;

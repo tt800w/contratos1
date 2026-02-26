@@ -11,6 +11,7 @@ interface ContractLayoutProps {
     onUserSelect: (id: string) => void;
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     previewBlob: Blob | null;
+    templateUrl?: string;
     children: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ const ContractLayout = ({
     onUserSelect,
     onFileUpload,
     previewBlob,
+    templateUrl = "",
     children
 }: ContractLayoutProps) => {
     return (
@@ -73,7 +75,7 @@ const ContractLayout = ({
 
                 {/* Preview Panel */}
                 <DocxViewer
-                    url="" // We use blob
+                    url={templateUrl}
                     blob={previewBlob}
                     title={`VISTA PREVIA - ${title.toUpperCase()}`}
                 />

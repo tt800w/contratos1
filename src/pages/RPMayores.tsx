@@ -83,6 +83,7 @@ const RPMayores = () => {
             onUserSelect={setSelectedUser}
             onFileUpload={handleFileUpload}
             previewBlob={previewBlob}
+            templateUrl="/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx"
         >
             <div className="grid grid-cols-2 gap-3">
                 <ContractField label="Pagaré" value={pagare} onChange={setPagare} placeholder="#" />
