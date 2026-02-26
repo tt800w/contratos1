@@ -95,8 +95,8 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "ANO": ano,
 
         // Additional fields
-        "NUMERO DE PAGARE": extraData.pagare || '',
-        "PAGARE": extraData.pagare || '',
+        "NUMERO DE PAGARE": extraData.pagare || '____________________',
+        "PAGARE": extraData.pagare || '____________________',
         "numero_cuotas": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "CUOTAS": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "PLAN_PAGOS": planPagos,
