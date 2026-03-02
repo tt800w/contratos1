@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileDown, FileText } from "lucide-react";
-import { generateContract, prepareUnifiedData, downloadAsPDF } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF, getContractFileName } from "@/utils/contractGenerator";
 import { toast } from "sonner";
 import { CamperData } from "@/utils/excelParser";
 import { useCamperData } from "@/hooks/useCamperData";
@@ -69,7 +69,7 @@ const PPMenores = () => {
                     onClick={async () => {
                         const data = validateAndPrepare();
                         if (!data) return;
-                        const nameToUse = customFileName ? (customFileName.toLowerCase().endsWith('.docx') ? customFileName : `${customFileName}.docx`) : `Contrato_PP_Menores_${selectedUserData.name.replace(/\s+/g, '_')}.docx`;
+                        const nameToUse = getContractFileName(pagare, "Pronto Pago", selectedUserData.name, 'docx', customFileName);
                         await generateContract("/contratos/Condiciones Específicas-Pronto Pago Menor de Edad.docx", data, nameToUse);
                         toast.success("Archivo Word generado");
                     }} disabled={!selectedUser}>
@@ -79,7 +79,7 @@ const PPMenores = () => {
                     onClick={() => {
                         const data = validateAndPrepare();
                         if (!data) return;
-                        const nameToUse = customFileName ? (customFileName.toLowerCase().endsWith('.pdf') ? customFileName : `${customFileName}.pdf`) : `Contrato_PP_Menores_${selectedUserData.name.replace(/\s+/g, '_')}.pdf`;
+                        const nameToUse = getContractFileName(pagare, "Pronto Pago", selectedUserData.name, 'pdf', customFileName);
                         toast.promise(downloadAsPDF("docx-reader-container", nameToUse), { loading: 'Generando PDF...', success: 'PDF descargado', error: 'Error al generar PDF' });
                     }} disabled={!selectedUser}>
                     <FileDown className="w-4 h-4" /> PDF

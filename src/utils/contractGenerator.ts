@@ -191,6 +191,28 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
 };
 
 /**
+ * Genera el nombre del archivo del contrato siguiendo el formato estándar:
+ * [Pagaré]. Condiciones Especificas - [Tipo] - [Nombre]
+ */
+export const getContractFileName = (
+    pagare: string,
+    tipo: string,
+    nombre: string,
+    extension: 'docx' | 'pdf',
+    customName?: string
+) => {
+    if (customName) {
+        return customName.toLowerCase().endsWith(`.${extension}`)
+            ? customName
+            : `${customName}.${extension}`;
+    }
+
+    const pagarePath = pagare ? `${pagare}. ` : "";
+    const cleanNombre = nombre.trim();
+    return `${pagarePath}Condiciones Especificas - ${tipo} - ${cleanNombre}.${extension}`;
+};
+
+/**
  * Genera un PDF a partir del contenido renderizado en el DOM.
  * Requiere que la librería html2pdf.js esté instalada/disponible.
  */
