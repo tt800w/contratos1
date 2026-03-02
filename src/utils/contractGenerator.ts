@@ -29,8 +29,9 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : 13000000;
 
         if (extraData.isPP) {
-            // Mensaje por defecto para Pronto Pago sin prefijo de "CUOTA 1"
-            planPagos = `${formatCurrencySpanish(TOTAL_OBJETIVO)} al momento de la firma del presente documento.`;
+            const fecha = extraData.fechasCuotas?.[0];
+            const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+            planPagos = `${formatCurrencySpanish(TOTAL_OBJETIVO)} ${fechaTexto}al momento de la firma del presente documento.`;
         } else if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
             // Modo Manual (Solo para RP)
             planPagos = "";

@@ -13,6 +13,7 @@ const PPMenores = () => {
     // Campos específicos
     const [pagare, setPagare] = useState("");
     const [fechaContrato, setFechaContrato] = useState("");
+    const [fechaPago, setFechaPago] = useState("");
     const [customFileName, setCustomFileName] = useState("");
     const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
@@ -22,7 +23,7 @@ const PPMenores = () => {
             return null;
         }
         return prepareUnifiedData(selectedUserData.raw as CamperData, {
-            pagare, fechaContrato, isPP: true
+            pagare, fechaContrato, isPP: true, fechasCuotas: [fechaPago]
         });
     };
 
@@ -54,7 +55,11 @@ const PPMenores = () => {
         >
             <div className="grid grid-cols-2 gap-3">
                 <ContractField label="Pagaré" value={pagare} onChange={setPagare} placeholder="#" />
-                <ContractField label="Fecha" value={fechaContrato} onChange={setFechaContrato} type="date" />
+                <ContractField label="Fecha contrato" value={fechaContrato} onChange={setFechaContrato} type="date" />
+            </div>
+
+            <div className="p-3 bg-secondary/20 rounded-lg border border-border mt-3">
+                <ContractField label="Fecha límite de pago" value={fechaPago} onChange={setFechaPago} type="date" />
             </div>
 
             <FileNameField value={customFileName} onChange={setCustomFileName} />
