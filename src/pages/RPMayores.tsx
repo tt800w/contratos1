@@ -112,7 +112,7 @@ const RPMayores = () => {
                             onChange={(e) => handleNumCuotasChange(e.target.value)}
                             className="w-full p-2 text-sm rounded-md border border-input bg-background"
                         >
-                            {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n.toString()}>{n} {n === 1 ? 'Cuota' : 'Cuotas'}</option>)}
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(n => <option key={n} value={n.toString()}>{n} {n === 1 ? 'Cuota' : 'Cuotas'}</option>)}
                         </select>
                     </div>
 
