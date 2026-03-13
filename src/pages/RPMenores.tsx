@@ -7,7 +7,7 @@ import { CamperData } from "@/utils/excelParser";
 import { useCamperData } from "@/hooks/useCamperData";
 import { validateMonths, validateChronology } from "@/utils/validation";
 import ContractLayout from "@/components/ContractLayout";
-import { ContractField, FileNameField } from "@/components/CommonFields";
+import { ContractField, FileNameField, CurrencyField } from "@/components/CommonFields";
 
 const RPMenores = () => {
     const { users, selectedUser, setSelectedUser, selectedUserData, handleFileUpload } = useCamperData();
@@ -20,9 +20,13 @@ const RPMenores = () => {
     const [manualCuotas, setManualCuotas] = useState<number[]>([13000000]);
     const [fechasCuotas, setFechasCuotas] = useState<string[]>([""]);
     const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+    const [valorFormacion, setValorFormacion] = useState("");
     const [customFileName, setCustomFileName] = useState("");
+    const [totalObjetivoOption, setTotalObjetivoOption] = useState<string>("13000000");
+    const [customTotal, setCustomTotal] = useState<number>(0);
 
-    const TOTAL_OBJETIVO = 13000000;
+    const totalObjetivo = totalObjetivoOption === "custom" ? customTotal : parseInt(totalObjetivoOption);
+
     const sumaManual = manualCuotas.reduce((acc, val) => acc + (val || 0), 0);
 
     const handleNumCuotasChange = (val: string) => {
@@ -46,8 +50,8 @@ const RPMenores = () => {
             toast.error("Por favor seleccione un camper");
             return null;
         }
-        if (modoPago === 'manual' && sumaManual !== TOTAL_OBJETIVO) {
-            toast.error(`La suma total de las cuotas debe ser ${TOTAL_OBJETIVO.toLocaleString()}`);
+        if (modoPago === 'manual' && sumaManual !== totalObjetivo) {
+            toast.error(`La suma total de las cuotas debe ser $ ${totalObjetivo.toLocaleString()}`);
             return null;
         }
         if (!validateMonths(fechasCuotas) || !validateChronology(fechasCuotas)) {
@@ -55,7 +59,7 @@ const RPMenores = () => {
             return null;
         }
         return prepareUnifiedData(selectedUserData.raw as CamperData, {
-            pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true
+            pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true, totalObjetivo, valorFormacion
         });
     };
 
@@ -85,14 +89,56 @@ const RPMenores = () => {
             previewBlob={previewBlob}
             templateUrl="/contratos/Condiciones Específicas-Recursos Propios Menor de Edad.docx"
         >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
                 <ContractField label="Pagaré" value={pagare} onChange={setPagare} placeholder="#" />
                 <ContractField label="Fecha" value={fechaContrato} onChange={setFechaContrato} type="date" />
             </div>
 
+            <div className="p-3 bg-secondary/20 rounded-lg border border-border mb-3">
+                <CurrencyField label="Valor Total de Formación" value={valorFormacion} onChange={setValorFormacion} placeholder="Ej: 18000000" />
+            </div>
+
             {/* Plan de Pagos */}
             <div className="p-3 bg-secondary/20 rounded-lg border border-border">
-                <label className="section-label mb-2 block">PLAN DE PAGOS (Total 13M)</label>
+                <label className="section-label mb-2 block">PLAN DE PAGOS</label>
+                <div className="mb-3">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Valor Total Objetivo</label>
+                    <div className="flex gap-2">
+                        <select
+                            value={totalObjetivoOption}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setTotalObjetivoOption(val);
+                                if (val !== "custom") {
+                                    const newTotal = parseInt(val);
+                                    if (modoPago === 'manual' && cuotas === "1") {
+                                        setManualCuotas([newTotal]);
+                                    }
+                                }
+                            }}
+                            className={`p-2 text-sm rounded-md border border-input bg-background ${totalObjetivoOption === 'custom' ? 'w-1/2' : 'w-full'}`}
+                        >
+                            <option value="13000000">$ 13.000.000</option>
+                            <option value="12000000">$ 12.000.000</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        {totalObjetivoOption === 'custom' && (
+                            <CurrencyField
+                                value={customTotal ? customTotal.toString() : ""}
+                                onChange={(val) => {
+                                    const newTotal = parseInt(val) || 0;
+                                    setCustomTotal(newTotal);
+                                    if (modoPago === 'manual' && cuotas === "1") {
+                                        setManualCuotas([newTotal]);
+                                    }
+                                }}
+                                className="w-1/2"
+                                inputClassName="w-full p-2 pl-7 text-sm rounded-md border border-input bg-background"
+                                placeholder="Ingrese valor..."
+                            />
+                        )}
+                    </div>
+                </div>
                 <div className="flex gap-2 p-1 bg-background/50 rounded-md mb-3">
                     <button
                         className={`flex-1 py-1 px-3 rounded-md text-[10px] font-bold transition-all ${modoPago === 'auto' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}
@@ -121,18 +167,26 @@ const RPMenores = () => {
                             <div key={i} className="flex gap-2 items-end bg-background/40 p-2 rounded border border-border/50">
                                 <div className="flex-1">
                                     <label className="text-[9px] font-bold uppercase text-muted-foreground mb-1 block">Cuota {i + 1}</label>
-                                    <input
-                                        type="number"
-                                        value={modoPago === 'manual' ? manualCuotas[i] : ""}
-                                        disabled={modoPago === 'auto'}
-                                        onChange={(e) => {
-                                            const newC = [...manualCuotas];
-                                            newC[i] = parseInt(e.target.value) || 0;
-                                            setManualCuotas(newC);
-                                        }}
-                                        className="w-full p-1.5 text-xs rounded border border-input bg-background/50 disabled:opacity-50"
-                                        placeholder={modoPago === 'auto' ? "Automático" : "0"}
-                                    />
+                                    {modoPago === 'auto' ? (
+                                        <input
+                                            type="text"
+                                            disabled
+                                            className="w-full p-1.5 text-xs rounded border border-input bg-background/50 disabled:opacity-50"
+                                            placeholder="Automático"
+                                        />
+                                    ) : (
+                                        <CurrencyField
+                                            value={manualCuotas[i] !== 0 ? manualCuotas[i].toString() : ""}
+                                            onChange={(val) => {
+                                                const newC = [...manualCuotas];
+                                                newC[i] = parseInt(val) || 0;
+                                                setManualCuotas(newC);
+                                            }}
+                                            className="w-full"
+                                            inputClassName="w-full p-1.5 pl-6 text-xs rounded border border-input bg-background/50"
+                                            placeholder="0"
+                                        />
+                                    )}
                                 </div>
                                 <div className="flex-1">
                                     <label className="text-[9px] font-bold uppercase text-muted-foreground mb-1 block">Vencimiento</label>

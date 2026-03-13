@@ -12,7 +12,7 @@ export interface UnifiedContractData {
     };
 }
 
-import { formatCurrencySpanish } from './numberToWords';
+import { formatCurrencySpanish, numberToSpanishWords } from './numberToWords';
 
 export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const fechaObj = extraData.fechaContrato ? new Date(extraData.fechaContrato + 'T00:00:00') : new Date();
@@ -26,7 +26,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
 
     // Lógica específica para Recursos Propios y Pronto Pago
     if (extraData.isRP || extraData.isPP) {
-        const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : 13000000;
+        const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
 
         if (extraData.isPP) {
             const fecha = extraData.fechasCuotas?.[0];
@@ -101,6 +101,12 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "numero_cuotas": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "CUOTAS": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "PLAN_PAGOS": planPagos,
+        "FECHA_PAGO": extraData.fechasCuotas?.[0] || "",
+        "FECHA_LIMITE_PAGO": extraData.fechasCuotas?.[0] || "",
+        "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000))}` : "",
+        "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim() : "",
+        "VALOR_FORMACION_NUMEROS": extraData.valorFormacion ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(parseInt(extraData.valorFormacion))}` : "",
+        "VALOR_FORMACION_LETRAS": extraData.valorFormacion ? numberToSpanishWords(parseInt(extraData.valorFormacion)).trim() : "",
 
         // Include everything from extraData just in case
         ...extraData
