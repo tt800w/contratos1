@@ -238,6 +238,22 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
     const originalTransform = element.style.transform;
     const originalTransition = element.style.transition;
     const originalVisibility = element.style.visibility;
+    
+    // Inyectar un estilo temporal para la impresión
+    const printStyle = document.createElement('style');
+    printStyle.innerHTML = `
+        #${elementId} {
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        #${elementId} section {
+            margin-bottom: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+    `;
+    document.head.appendChild(printStyle);
 
     try {
         // Desactivar animaciones y transformaciones para una captura limpia
@@ -262,7 +278,7 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
                 scrollX: 0
             },
             jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
-            pagebreak: { mode: ['css', 'legacy'], after: 'section' }
+            pagebreak: { mode: ['css', 'legacy'], after: 'section:not(:last-child)' }
         };
 
         const doc = html2pdf().set(opt).from(element);
@@ -272,11 +288,15 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
         element.style.transform = originalTransform;
         element.style.transition = originalTransition;
         element.style.visibility = originalVisibility;
+        document.head.removeChild(printStyle);
         return true;
     } catch (error: any) {
         element.style.transform = originalTransform;
         element.style.transition = originalTransition;
         element.style.visibility = originalVisibility;
+        if (document.head.contains(printStyle)) {
+            document.head.removeChild(printStyle);
+        }
         console.error('Error al generar PDF:', error);
         throw new Error("Error al generar PDF. Intente de nuevo.");
     }
