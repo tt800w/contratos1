@@ -62,17 +62,18 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     return {
         // Camper data with variations
         "NOMBRE DEL CAMPER": raw.nombreCamper,
-        "NUMERO DE CEDULA": raw.documentoCamper,
+        "NUMERO DE CEDULA": extraData.isMinor ? raw.cedulaRepresentante : raw.documentoCamper,
         "NUMERO DE TARJETA DE IDENTIDAD": raw.documentoCamper,
         "DOCUMENTO": raw.documentoCamper,
+        "NUMERO DE DOCUMENTO": raw.documentoCamper,
 
         "DIRECCION FISICA CAMPER": raw.direccionCamper,
         "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
         "DIRECCION": raw.direccionCamper,
 
         "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante,
-        "EMAIL REP CAMPER": raw.emailRepresentante,
-        "CORREO": raw.emailRepresentante,
+        "EMAIL REP CAMPER": raw.emailRepresentante || raw.emailCamper,
+        "CORREO": raw.emailRepresentante || raw.emailCamper,
 
         "CELULAR CAMPER": raw.celularCamper,
         "CELULAR": raw.celularCamper,
@@ -80,6 +81,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
 
         // Representative data
         "NOMBRE COMPLETO REP": raw.nombreRepresentante,
+        "NOMBRE DEL REPRESENTANTE LEGAL": raw.nombreRepresentante,
         "CEDULA REP DEL CAMPER": raw.cedulaRepresentante,
         "CEDULA REPRESENTANTE": raw.cedulaRepresentante,
 

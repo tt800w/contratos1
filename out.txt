@@ -1,0 +1,25 @@
+-------------------
+Extracting tags from: public/contratos/Condiciones Específicas-Recursos Propios Menor de Edad.docx
+NOMBRE DEL REPRESENTANTE LEGAL
+NUMERO DE CEDULA
+NOMBRE DEL CAMPER
+NUMERO DE DOCUMENTO
+DIRECCION FISICA DEL CAMPER
+EMAIL CAMPER
+CELULAR CAMPER
+dia
+mes
+ano
+CORREO
+NUMERO DE PAGARE
+-------------------
+Extracting tags from: public/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx
+NOMBRE DEL CAMPER
+NUMERO DE CEDULA
+DIRECCION FISICA DEL CAMPER
+EMAIL CAMPER
+CELULAR CAMPER
+dia
+mes
+ano
+NUMERO DE PAGARE

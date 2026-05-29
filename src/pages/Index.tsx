@@ -2,12 +2,10 @@ import Header from "@/components/Header";
 import ContractCard from "@/components/ContractCard";
 
 const contracts = [
-  { title: "Lumni Menores de edad", route: "/lumni-menores" },
-  { title: "Lumni Mayores de edad", route: "/lumni-mayores" },
-  { title: "Recursos Propios Menores de edad", route: "/rp-menores" },
-  { title: "Recursos Propios Mayores de edad", route: "/rp-mayores" },
-  { title: "Pronto Pago Menores de edad", route: "/pp-menores" },
-  { title: "Pronto Pago Mayores de edad", route: "/pp-mayores" },
+  { title: "Lumni Menores de edad", route: "/lumni-menores", type: "lumni" },
+  { title: "Lumni Mayores de edad", route: "/lumni-mayores", type: "lumni" },
+  { title: "Recursos Propios Menores de edad", route: "/rp-menores", type: "rp" },
+  { title: "Recursos Propios Mayores de edad", route: "/rp-mayores", type: "rp" },
 ];
 
 const Index = () => {
@@ -31,11 +29,12 @@ const Index = () => {
               CONTRATOS LUMNI
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contracts.filter(c => c.title.includes("Lumni")).map((contract, index) => (
+              {contracts.filter(c => c.type === "lumni").map((contract, index) => (
                 <ContractCard
                   key={index}
                   title={contract.title}
                   route={contract.route}
+                  isDisabled={true}
                 />
               ))}
             </div>
@@ -48,7 +47,7 @@ const Index = () => {
               CONTRATOS RECURSOS PROPIOS
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contracts.filter(c => c.title.includes("Recursos Propios")).map((contract, index) => (
+              {contracts.filter(c => c.type === "rp").map((contract, index) => (
                 <ContractCard
                   key={index}
                   title={contract.title}
@@ -58,22 +57,6 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Sección Pronto Pago */}
-          <div>
-            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
-              <span className="w-8 h-[2px] bg-primary"></span>
-              CONTRATOS PRONTO PAGO
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contracts.filter(c => c.title.includes("Pronto Pago")).map((contract, index) => (
-                <ContractCard
-                  key={index}
-                  title={contract.title}
-                  route={contract.route}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       </main>
 

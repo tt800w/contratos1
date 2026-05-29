@@ -59,7 +59,7 @@ const RPMenores = () => {
             return null;
         }
         return prepareUnifiedData(selectedUserData.raw as CamperData, {
-            pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true, totalObjetivo, valorFormacion
+            pagare, fechaContrato, cuotas, modoPago, manualCuotas, fechasCuotas, isRP: true, totalObjetivo, valorFormacion, isMinor: true
         });
     };
 

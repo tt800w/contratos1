@@ -19,10 +19,10 @@ const getValue = (row: any, possibleHeaders: string[]): string => {
         if (row[header] !== undefined) {
             return String(row[header]).trim();
         }
-        // Try trimming the header in the row object keys roughly
-        const trimmedRow = Object.keys(row).find(key => key.trim() === header);
-        if (trimmedRow && row[trimmedRow] !== undefined) {
-            return String(row[trimmedRow]).trim();
+        // Try matching case-insensitively
+        const matchedKey = Object.keys(row).find(key => key.trim().toLowerCase() === header.toLowerCase());
+        if (matchedKey && row[matchedKey] !== undefined) {
+            return String(row[matchedKey]).trim();
         }
     }
     return '';
@@ -49,8 +49,8 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                         nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre']),
                         documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento']),
                         direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion']),
-                        emailRepresentante: getValue(row, ['Email representante Camper', 'Email acudiente', 'Correo acudiente', 'EMAIL REP CAMPER', 'Dirección de correo electrónico', 'Email', 'Correo', 'Correo Electrónico']),
-                        emailCamper: getValue(row, ['Email Camper', 'Correo Camper', 'Correo Estudiante', 'Email Estudiante']),
+                        emailRepresentante: getValue(row, ['Email representante Camper', 'Email acudiente', 'Correo acudiente', 'EMAIL REP CAMPER', 'Correo del Acudiente', 'Email del Acudiente']),
+                        emailCamper: getValue(row, ['Email Camper', 'Correo Camper', 'Correo Estudiante', 'Email Estudiante', 'Dirección de correo electrónico', 'Email', 'Correo', 'Correo Electrónico']),
                         celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER']),
                         telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER']),
                     };
