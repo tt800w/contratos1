@@ -23,6 +23,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
 
     const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
     let planPagos = "";
+    let cuotasList: any[] = [];
 
     // Lógica específica para Recursos Propios y Pronto Pago
     if (extraData.isRP || extraData.isPP) {
@@ -36,58 +37,73 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
             // Modo Manual (Solo para RP)
             planPagos = "";
             extraData.manualCuotas.forEach((valor: number, index: number) => {
-                const label = index === 0 ? "CUOTA 1" : `CUOTA ${index + 1}`;
+                const label = `CUOTA ${index + 1}:`;
                 const fecha = extraData.fechasCuotas?.[index];
                 const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
 
-                planPagos += `${label}: ${formatCurrencySpanish(valor)} ${fechaTexto}al momento de la firma del presente documento.\n`;
+                cuotasList.push({
+                    titulo: label,
+                    valor: `${formatCurrencySpanish(valor).toUpperCase()}`,
+                    fecha_prefijo: fecha ? " con una fecha límite de pago de " : "",
+                    fecha_bold: fecha || "",
+                    fecha_sufijo: fecha ? " al momento de la firma del presente documento." : " al momento de la firma del presente documento."
+                });
             });
         } else {
-            // Modo Automático (Default para RP): Dividir el presupuesto
+            const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
+            const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
             const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
             const ajusteUltimaCuota = TOTAL_OBJETIVO - (valorCuota * (numCuotasTotal - 1));
 
-            planPagos = "";
             for (let i = 1; i <= numCuotasTotal; i++) {
-                const label = i === 1 ? "CUOTA 1" : `CUOTA ${i}`;
+                const label = `CUOTA ${i}:`;
                 const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuota;
                 const fecha = extraData.fechasCuotas?.[i - 1];
                 const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
 
-                planPagos += `${label}: ${formatCurrencySpanish(valorAUsar)} ${fechaTexto}al momento de la firma del presente documento.\n`;
+                cuotasList.push({
+                    titulo: label,
+                    valor: `${formatCurrencySpanish(valorAUsar).toUpperCase()}`,
+                    fecha_prefijo: fecha ? " con una fecha límite de pago de " : "",
+                    fecha_bold: fecha || "",
+                    fecha_sufijo: fecha ? " al momento de la firma del presente documento." : " al momento de la firma del presente documento."
+                });
             }
         }
     }
 
     return {
         // Camper data with variations
-        "NOMBRE DEL CAMPER": raw.nombreCamper,
-        "NUMERO DE CEDULA": extraData.isMinor ? raw.cedulaRepresentante : raw.documentoCamper,
-        "NUMERO DE TARJETA DE IDENTIDAD": raw.documentoCamper,
-        "DOCUMENTO": raw.documentoCamper,
-        "NUMERO DE DOCUMENTO": raw.documentoCamper,
+        "NOMBRE DEL CAMPER": raw.nombreCamper || "",
+        "NUMERO DE CEDULA": extraData.isMinor ? raw.cedulaRepresentante : raw.documentoCamper || "",
+        "NUMERO DE TARJETA DE IDENTIDAD": raw.documentoCamper || "",
+        "DOCUMENTO": raw.documentoCamper || "",
+        "NUMERO DE DOCUMENTO": raw.documentoCamper || "",
 
-        "DIRECCION FISICA CAMPER": raw.direccionCamper,
-        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
-        "DIRECCION": raw.direccionCamper,
+        "DIRECCION FISICA CAMPER": raw.direccionCamper || "",
+        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper || "",
+        "DIRECCION": raw.direccionCamper || "",
+        "CIUDAD": "Bucaramanga",
+        "CIUDAD DE RESIDENCIA": "Bucaramanga",
+        "TELEFONO CAMPER": raw.telefonoCamper || "",
+        "CELULAR CAMPER": raw.telefonoCamper || "",
+        "CELULAR": raw.telefonoCamper || "",
+        "TELEFONO": raw.telefonoCamper || "",
 
-        "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante,
-        "EMAIL REP CAMPER": raw.emailRepresentante || raw.emailCamper,
-        "CORREO": raw.emailRepresentante || raw.emailCamper,
-
-        "CELULAR CAMPER": raw.celularCamper,
-        "CELULAR": raw.celularCamper,
-        "TELEFONO": raw.celularCamper,
+        "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante || "",
+        "EMAIL REP CAMPER": raw.emailRepresentante || "",
+        "CORREO": raw.emailRepresentante || raw.emailCamper || "",
 
         // Representative data
-        "NOMBRE COMPLETO REP": raw.nombreRepresentante,
-        "NOMBRE DEL REPRESENTANTE LEGAL": raw.nombreRepresentante,
-        "CEDULA REP DEL CAMPER": raw.cedulaRepresentante,
-        "CEDULA REPRESENTANTE": raw.cedulaRepresentante,
+        "NOMBRE COMPLETO REP": raw.nombreRepresentante || "",
+        "NOMBRE DEL REPRESENTANTE LEGAL": raw.nombreRepresentante || "",
+        "NOMBRE REPRESENTANTE": raw.nombreRepresentante || "",
+        "CEDULA REP DEL CAMPER": raw.cedulaRepresentante || "",
+        "CEDULA REPRESENTANTE": raw.cedulaRepresentante || "",
 
-        "TELEFONO REP CAMPER": raw.telefonoRepresentante,
-        "TELEFONO REPRESENTANTE": raw.telefonoRepresentante,
-        "CELULAR REPRESENTANTE": raw.telefonoRepresentante,
+        "TELEFONO REP CAMPER": raw.telefonoRepresentante || "",
+        "TELEFONO REPRESENTANTE": raw.telefonoRepresentante || "",
+        "CELULAR REPRESENTANTE": raw.telefonoRepresentante || "",
 
         // Date variations
         "dia": dia,
@@ -103,10 +119,12 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "numero_cuotas": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "CUOTAS": extraData.isPP ? "1" : (extraData.cuotas || ''),
         "PLAN_PAGOS": planPagos,
+        "CUOTAS_LIST": cuotasList,
         "FECHA_PAGO": extraData.fechasCuotas?.[0] || "",
         "FECHA_LIMITE_PAGO": extraData.fechasCuotas?.[0] || "",
         "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000))}` : "",
         "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim() : "",
+        "VALOR_TOTAL_LETRAS_UPPER": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim().toUpperCase() : "",
         "VALOR_FORMACION_NUMEROS": extraData.valorFormacion ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(parseInt(extraData.valorFormacion))}` : "",
         "VALOR_FORMACION_LETRAS": extraData.valorFormacion ? numberToSpanishWords(parseInt(extraData.valorFormacion)).trim() : "",
 
@@ -244,13 +262,20 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
     printStyle.innerHTML = `
         #${elementId} {
             transform: none !important;
-            margin: 0 !important;
+            width: 210mm !important;
+            margin: 0 auto !important;
             padding: 0 !important;
         }
         #${elementId} section {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            padding: 0 !important;
             margin-bottom: 0 !important;
             box-shadow: none !important;
             border: none !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            box-sizing: border-box !important;
         }
     `;
     document.head.appendChild(printStyle);
@@ -265,20 +290,19 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
         const html2pdf = (await import('html2pdf.js')).default;
 
         const opt = {
-            margin: 0,
+            margin: 15,
             filename: outputName,
             image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: {
                 scale: 2, // 2 es suficiente y más estable que 3
                 useCORS: true,
                 logging: false,
-                letterRendering: true,
                 allowTaint: false,
                 scrollY: 0,
                 scrollX: 0
             },
             jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
-            pagebreak: { mode: ['css', 'legacy'], after: 'section:not(:last-child)' }
+            pagebreak: { mode: ['css', 'legacy'] }
         };
 
         const doc = html2pdf().set(opt).from(element);
@@ -294,10 +318,58 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
         element.style.transform = originalTransform;
         element.style.transition = originalTransition;
         element.style.visibility = originalVisibility;
-        if (document.head.contains(printStyle)) {
-            document.head.removeChild(printStyle);
+        document.head.removeChild(printStyle);
+        console.error('Error generando PDF con html2pdf:', error);
+        throw new Error(error.message || "Error desconocido al generar PDF");
+    }
+};
+
+/**
+ * Convierte un Blob de DOCX a PDF usando ConvertAPI (Backend-based conversion).
+ * Garantiza 100% de retención del formato nativo de Word.
+ */
+export const downloadAsNativePDF = async (docxBlob: Blob, outputName: string) => {
+    const convertApiSecret = import.meta.env.VITE_CONVERTAPI_SECRET;
+    
+    if (!convertApiSecret) {
+        throw new Error("Falta la clave VITE_CONVERTAPI_SECRET en el archivo .env. Regístrate en convertapi.com y añádela.");
+    }
+
+    const formData = new FormData();
+    formData.append('File', docxBlob, outputName.replace('.pdf', '.docx'));
+
+    try {
+        const response = await fetch(`https://v2.convertapi.com/convert/docx/to/pdf?Secret=${convertApiSecret}`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error en el servidor de conversión: ${response.status} - ${errorText}`);
         }
-        console.error('Error al generar PDF:', error);
-        throw new Error("Error al generar PDF. Intente de nuevo.");
+
+        const data = await response.json();
+        
+        if (data && data.Files && data.Files.length > 0) {
+            const base64Data = data.Files[0].FileData;
+            
+            // Decodificar Base64 a Blob
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const pdfBlob = new Blob([byteArray], { type: 'application/pdf' });
+            
+            saveAs(pdfBlob, outputName);
+            return true;
+        } else {
+             throw new Error("El servicio no retornó el archivo PDF.");
+        }
+    } catch (error: any) {
+        console.error("Error en conversión nativa a PDF:", error);
+        throw new Error(error.message || "Error al contactar el servicio de conversión");
     }
 };

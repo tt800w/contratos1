@@ -57,25 +57,52 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                     renderFooters: false,
                 });
 
-                // Inyectar el overlay en cada sección (página)
+                // Inyectar el overlay real en cada sección (página)
                 const sections = containerRef.current.querySelectorAll('section');
                 sections.forEach(section => {
                     section.classList.add('relative');
                     section.style.position = 'relative';
 
-                    const overlayContainer = document.createElement('div');
-                    overlayContainer.className = 'brand-overlay-wrapper';
-                    section.appendChild(overlayContainer);
+                    // 1. Inyectar Encabezado Real
+                    const headerContainer = document.createElement('div');
+                    headerContainer.className = 'brand-header-overlay';
 
-                    // Renderizar el BrandOverlay manualmente o vía portal si fuera React puro, 
-                    // pero como docx-preview inyecta HTML crudo, usaremos un truco de CSS 
-                    // para posicionar un elemento inyectado.
+                    const navyCorner = document.createElement('div');
+                    navyCorner.className = 'brand-header-navy';
+                    headerContainer.appendChild(navyCorner);
+
+                    const logoImg = document.createElement('img');
+                    logoImg.src = '/Logocamp.png';
+                    logoImg.className = 'brand-header-logo';
+                    headerContainer.appendChild(logoImg);
+
+                    const headerLine = document.createElement('div');
+                    headerLine.className = 'brand-header-line';
+                    headerContainer.appendChild(headerLine);
+
+                    // Insertar al inicio de la sección para estar detrás del texto si es necesario pero z-indexed
+                    section.insertBefore(headerContainer, section.firstChild);
+
+                    // 2. Inyectar Pie de Página Real
+                    const footerContainer = document.createElement('div');
+                    footerContainer.className = 'brand-footer-overlay';
+
+                    const footerNavy = document.createElement('div');
+                    footerNavy.className = 'brand-footer-navy';
+                    footerContainer.appendChild(footerNavy);
+
+                    const footerText = document.createElement('div');
+                    footerText.className = 'brand-footer-text';
+                    footerText.innerText = 'Km.4, Anillo Vial, Bucaramanga, Santander';
+                    footerContainer.appendChild(footerText);
+
+                    section.appendChild(footerContainer);
                 });
 
             } catch (error) {
                 console.error("Error displaying document:", error);
                 if (containerRef.current) {
-                    containerRef.current.innerHTML = `<div class="p-8 text-red-500 text-center">Error al cargar el documento.</div>`;
+                    containerRef.current.innerHTML = `<div class="p-8 text-red-500 text-center">Error al cargar el documento: ${error.message || error}</div>`;
                 }
             } finally {
                 setIsLoading(false);
@@ -152,7 +179,7 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
         .docx-render-content section {
           width: 210mm !important;
           min-height: 297mm !important;
-          padding: 4.5cm 2cm 3.5cm 2cm !important; /* Más margen para el overlay superior e inferior */
+          padding: 1.5cm 2cm 1.5cm 2cm !important; /* Margen estándar y ceñido para plataformas PDF, eliminando espacios vacíos */
           margin-bottom: 20px !important;
           background: white !important;
           box-shadow: 0 0 10px rgba(0,0,0,0.2) !important;
@@ -162,60 +189,86 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
           overflow: hidden !important;
         }
 
-        /* Overlay Styles */
-        .docx-render-content section::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+        /* Real Header Overlay Styles */
+        .brand-header-overlay {
+            position: relative;
+            width: calc(100% + 4cm);
+            margin-left: -2cm;
+            margin-top: -1.5cm;
+            height: 56px;
             pointer-events: none;
-            background-image: 
-                url('/Logocamp.png'),
-                linear-gradient(to right, #82c91e, #82c91e);
-            background-repeat: no-repeat;
-            background-size: 40px auto, 80% 1px;
-            background-position: 40px 40px, center 100px;
             z-index: 10;
+            margin-bottom: 20px;
         }
 
-        /* Header Navy Decoration */
-        .docx-render-content section::after {
-            content: "";
+        .brand-header-navy {
             position: absolute;
-            top: 0; right: 0; 
-            width: 120px; height: 60px;
+            top: 0;
+            right: 0;
+            width: 110px;
+            height: 50px;
             background: #0d1b2a; /* Navy */
-            border-bottom-left-radius: 40px;
+            border-bottom-left-radius: 20px;
             z-index: 11;
         }
 
-        /* Footer Decoration Logic (Custom pseudo-elements) */
-        .brand-overlay-wrapper {
+        .brand-header-logo {
             position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 80px;
+            top: 10px;
+            left: 20px;
+            width: 30px;
+            height: auto;
+            z-index: 12;
+        }
+
+        .brand-header-line {
+            position: absolute;
+            top: 50px;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background-color: #82c91e; /* Green line */
+            z-index: 11;
+        }
+
+        /* Real Footer Overlay Styles */
+        .brand-footer-overlay {
+            position: relative;
+            width: calc(100% + 4cm);
+            margin-left: -2cm;
+            margin-bottom: -1.5cm;
+            height: 56px;
             pointer-events: none;
             z-index: 10;
+            margin-top: 20px;
         }
 
-        .brand-overlay-wrapper::before {
-            content: "";
+        .brand-footer-navy {
             position: absolute;
-            bottom: 0; left: 0; 
-            width: 100px; height: 50px;
+            bottom: 0;
+            left: 0;
+            width: 100px;
+            height: 45px;
             background: #0d1b2a;
-            border-top-right-radius: 40px;
+            border-top-right-radius: 20px;
+            z-index: 11;
+        }
+            border-top-right-radius: 20px;
+            z-index: 11;
         }
 
-        .brand-overlay-wrapper::after {
-            content: "Km.4, Anillo Vial, Bucaramanga, Santander";
+        .brand-footer-text {
             position: absolute;
-            bottom: 20px; left: 0; width: 100%;
+            bottom: 10px;
+            left: 10%;
+            width: 80%;
             text-align: center;
             font-size: 10px;
             color: #999;
             border-top: 0.5px solid #82c91e;
-            padding-top: 10px;
-            margin: 0 40px;
-            width: calc(100% - 80px);
+            padding-top: 6px;
+            box-sizing: border-box;
+            z-index: 11;
         }
 
         /* Respetar saltos de página de la librería */
@@ -229,10 +282,6 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
         .docx-render-content table {
           width: 100% !important;
           border-collapse: collapse !important;
-        }
-        .docx-render-content p {
-          margin-bottom: 8pt !important;
-          line-height: 1.2 !important;
         }
       `}</style>
         </div>

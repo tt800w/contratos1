@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileDown, Mail, FileText } from "lucide-react";
-import { generateContract, prepareUnifiedData, downloadAsPDF, getContractFileName } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, downloadAsPDF, getContractFileName, downloadAsNativePDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { CamperData } from "@/utils/excelParser";
@@ -79,7 +79,10 @@ const LumniMayores = () => {
             const data = validateAndPrepare();
             if (!data) return;
             const nameToUse = getContractFileName(pagare, "Lumni", selectedUserData.name, 'pdf', customFileName);
-            toast.promise(downloadAsPDF("docx-reader-container", nameToUse), { loading: 'Generando PDF...', success: 'PDF descargado', error: 'Error al generar PDF' });
+            toast.promise(async () => {
+                const blob = await generateContract("/contratos/Condiciones Específicas-LUMNI Mayor de Edad.docx", data, "temp.docx", true);
+                await downloadAsNativePDF(blob as Blob, nameToUse);
+            }, { loading: 'Convirtiendo PDF nativo...', success: 'PDF nativo descargado', error: (err) => `Error: ${err.message}` });
           }} disabled={!selectedUser}>
           <FileDown className="w-4 h-4" /> PDF
         </button>

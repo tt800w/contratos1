@@ -134,12 +134,28 @@
   }
 
   /* Document Rendering Styles (Premium) */
+  .docx-render-content p {
+    border-bottom: none !important;
+  }
+  .docx-render-content span {
+    text-decoration: none !important;
+  }
+
+  /* Eliminar solo el primer salto de línea o párrafo vacío al inicio para subir el texto */
+  .brand-header-overlay + p:empty,
+  .brand-header-overlay + p:has(br:only-child) {
+    display: none !important;
+  }
+  .brand-header-overlay + p:empty + p:empty,
+  .brand-header-overlay + p:has(br:only-child) + p:has(br:only-child) {
+    display: none !important;
+  }
+
   .docx-render-content h1,
   .docx-render-content .title-primary {
     color: hsl(var(--brand-navy)) !important;
     text-align: center !important;
     text-transform: uppercase !important;
-    text-decoration: underline !important;
     font-weight: bold !important;
     margin-bottom: 20px !important;
   }
@@ -156,8 +172,6 @@
 
   .docx-render-content p {
     text-align: justify !important;
-    line-height: 1.5 !important;
-    margin-bottom: 12pt !important;
   }
 
   /* Invert calendar icon color for dark theme visibility */
