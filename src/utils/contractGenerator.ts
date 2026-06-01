@@ -21,6 +21,7 @@ const formatCurrencyNumber = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)}`;
 
+<<<<<<< HEAD
 const formatDateDisplay = (value: string) => {
   if (!value) return "";
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -28,6 +29,100 @@ const formatDateDisplay = (value: string) => {
     return `${match[3]}/${match[2]}/${match[1]}`;
   }
   return value;
+=======
+    const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
+    let planPagos = "";
+
+    // Lógica específica para Recursos Propios y Pronto Pago
+    if (extraData.isRP || extraData.isPP) {
+        const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
+
+        if (extraData.isPP) {
+            const fecha = extraData.fechasCuotas?.[0];
+            const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+            planPagos = `${formatCurrencySpanish(TOTAL_OBJETIVO)} ${fechaTexto}al momento de la firma del presente documento.`;
+        } else if (extraData.modoPago === 'manual' && Array.isArray(extraData.manualCuotas)) {
+            // Modo Manual (Solo para RP)
+            planPagos = "";
+            extraData.manualCuotas.forEach((valor: number, index: number) => {
+                const label = index === 0 ? "CUOTA 1" : `CUOTA ${index + 1}`;
+                const fecha = extraData.fechasCuotas?.[index];
+                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+
+                planPagos += `${label}: ${formatCurrencySpanish(valor)} ${fechaTexto}al momento de la firma del presente documento.\n`;
+            });
+        } else {
+            // Modo Automático (Default para RP): Dividir el presupuesto
+            const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
+            const ajusteUltimaCuota = TOTAL_OBJETIVO - (valorCuota * (numCuotasTotal - 1));
+
+            planPagos = "";
+            for (let i = 1; i <= numCuotasTotal; i++) {
+                const label = i === 1 ? "CUOTA 1" : `CUOTA ${i}`;
+                const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuota;
+                const fecha = extraData.fechasCuotas?.[i - 1];
+                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
+
+                planPagos += `${label}: ${formatCurrencySpanish(valorAUsar)} ${fechaTexto}al momento de la firma del presente documento.\n`;
+            }
+        }
+    }
+
+    return {
+        // Camper data with variations
+        "NOMBRE DEL CAMPER": raw.nombreCamper,
+        "NUMERO DE CEDULA": extraData.isMinor ? raw.cedulaRepresentante : raw.documentoCamper,
+        "NUMERO DE TARJETA DE IDENTIDAD": raw.documentoCamper,
+        "DOCUMENTO": raw.documentoCamper,
+        "NUMERO DE DOCUMENTO": raw.documentoCamper,
+
+        "DIRECCION FISICA CAMPER": raw.direccionCamper,
+        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper,
+        "DIRECCION": raw.direccionCamper,
+
+        "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante,
+        "EMAIL REP CAMPER": raw.emailRepresentante || raw.emailCamper,
+        "CORREO": raw.emailRepresentante || raw.emailCamper,
+
+        "CELULAR CAMPER": raw.celularCamper,
+        "CELULAR": raw.celularCamper,
+        "TELEFONO": raw.celularCamper,
+
+        // Representative data
+        "NOMBRE COMPLETO REP": raw.nombreRepresentante,
+        "NOMBRE DEL REPRESENTANTE LEGAL": raw.nombreRepresentante,
+        "CEDULA REP DEL CAMPER": raw.cedulaRepresentante,
+        "CEDULA REPRESENTANTE": raw.cedulaRepresentante,
+
+        "TELEFONO REP CAMPER": raw.telefonoRepresentante,
+        "TELEFONO REPRESENTANTE": raw.telefonoRepresentante,
+        "CELULAR REPRESENTANTE": raw.telefonoRepresentante,
+
+        // Date variations
+        "dia": dia,
+        "mes": mes,
+        "año": ano,
+        "ano": ano,
+        "AÑO": ano,
+        "ANO": ano,
+
+        // Additional fields
+        "NUMERO DE PAGARE": extraData.pagare || '____________________',
+        "PAGARE": extraData.pagare || '____________________',
+        "numero_cuotas": extraData.isPP ? "1" : (extraData.cuotas || ''),
+        "CUOTAS": extraData.isPP ? "1" : (extraData.cuotas || ''),
+        "PLAN_PAGOS": planPagos,
+        "FECHA_PAGO": extraData.fechasCuotas?.[0] || "",
+        "FECHA_LIMITE_PAGO": extraData.fechasCuotas?.[0] || "",
+        "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000))}` : "",
+        "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim() : "",
+        "VALOR_FORMACION_NUMEROS": extraData.valorFormacion ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(parseInt(extraData.valorFormacion))}` : "",
+        "VALOR_FORMACION_LETRAS": extraData.valorFormacion ? numberToSpanishWords(parseInt(extraData.valorFormacion)).trim() : "",
+
+        // Include everything from extraData just in case
+        ...extraData
+    };
+>>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
 };
 
 const escapeXml = (value: string | number) =>
@@ -772,10 +867,33 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
   // Wait a bit for any pending renders
   await new Promise((resolve) => setTimeout(resolve, 500));
 
+<<<<<<< HEAD
   // Guardar el transform original para restaurarlo luego
   const originalTransform = element.style.transform;
   const originalTransition = element.style.transition;
   const originalVisibility = element.style.visibility;
+=======
+    // Guardar el transform original para restaurarlo luego
+    const originalTransform = element.style.transform;
+    const originalTransition = element.style.transition;
+    const originalVisibility = element.style.visibility;
+    
+    // Inyectar un estilo temporal para la impresión
+    const printStyle = document.createElement('style');
+    printStyle.innerHTML = `
+        #${elementId} {
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        #${elementId} section {
+            margin-bottom: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+    `;
+    document.head.appendChild(printStyle);
+>>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
 
   try {
     // Desactivar animaciones y transformaciones para una captura limpia
@@ -787,6 +905,7 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
     // @ts-ignore
     const html2pdf = (await import("html2pdf.js")).default;
 
+<<<<<<< HEAD
     const opt = {
       margin: 0,
       filename: outputName,
@@ -808,10 +927,29 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
       },
       pagebreak: { mode: ["css", "legacy"] },
     };
+=======
+        const opt = {
+            margin: 0,
+            filename: outputName,
+            image: { type: 'jpeg' as const, quality: 0.98 },
+            html2canvas: {
+                scale: 2, // 2 es suficiente y más estable que 3
+                useCORS: true,
+                logging: false,
+                letterRendering: true,
+                allowTaint: false,
+                scrollY: 0,
+                scrollX: 0
+            },
+            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
+            pagebreak: { mode: ['css', 'legacy'], after: 'section:not(:last-child)' }
+        };
+>>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
 
     const doc = html2pdf().set(opt).from(element);
     await doc.save();
 
+<<<<<<< HEAD
     // Restaurar estado original
     element.style.transform = originalTransform;
     element.style.transition = originalTransition;
@@ -826,4 +964,22 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
     console.error("Error al generar PDF:", error);
     throw new Error("Error al generar PDF. Intente de nuevo.");
   }
+=======
+        // Restaurar estado original
+        element.style.transform = originalTransform;
+        element.style.transition = originalTransition;
+        element.style.visibility = originalVisibility;
+        document.head.removeChild(printStyle);
+        return true;
+    } catch (error: any) {
+        element.style.transform = originalTransform;
+        element.style.transition = originalTransition;
+        element.style.visibility = originalVisibility;
+        if (document.head.contains(printStyle)) {
+            document.head.removeChild(printStyle);
+        }
+        console.error('Error al generar PDF:', error);
+        throw new Error("Error al generar PDF. Intente de nuevo.");
+    }
+>>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
 };
