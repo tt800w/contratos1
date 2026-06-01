@@ -133,33 +133,6 @@
     @apply w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300;
   }
 
-  /* Document Rendering Styles (Premium) */
-  .docx-render-content h1,
-  .docx-render-content .title-primary {
-    color: hsl(var(--brand-navy)) !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    text-decoration: underline !important;
-    font-weight: bold !important;
-    margin-bottom: 20px !important;
-  }
-
-  .docx-render-content .section-header {
-    background-color: #f0f4f8 !important;
-    color: hsl(var(--brand-navy)) !important;
-    text-align: center !important;
-    font-weight: bold !important;
-    padding: 8px !important;
-    margin: 15px 0 !important;
-    text-transform: uppercase !important;
-  }
-
-  .docx-render-content p {
-    text-align: justify !important;
-    line-height: 1.5 !important;
-    margin-bottom: 12pt !important;
-  }
-
   /* Invert calendar icon color for dark theme visibility */
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
