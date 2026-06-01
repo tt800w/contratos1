@@ -86,7 +86,7 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
               "CC Representante",
             ]),
             nombreCamper: getValue(row, [
-              "Nombre completo del camper",
+              "Nombre completo del estudiante",
               "NOMBRE DEL CAMPER",
               "Nombre completo Camper",
               "Nombre Camper (estudiante)",
@@ -162,7 +162,7 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
               "Correo",
             ]),
             celularCamper: getValue(row, [
-              "Contacto del Camper",
+              "Contacto del estudiante",
               "CELULAR CAMPER",
               "Número de celular",
               "Celular Camper",
