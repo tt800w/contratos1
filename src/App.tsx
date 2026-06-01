@@ -16,14 +16,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-<<<<<<< HEAD
-=======
-          <Route path="/lumni-menores" element={<LumniMenores />} />
-          <Route path="/lumni-mayores" element={<LumniMayores />} />
-          <Route path="/rp-menores" element={<RPMenores />} />
-          <Route path="/rp-mayores" element={<RPMayores />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
->>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
