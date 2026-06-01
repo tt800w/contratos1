@@ -9,7 +9,6 @@ import {
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import Header from "@/components/Header";
-<<<<<<< HEAD
 import UserSelector from "@/components/UserSelector";
 import DocxViewer from "@/components/DocxViewer";
 import ContractManagementPanel from "@/components/ContractManagementPanel";
@@ -34,16 +33,6 @@ import {
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { CamperData } from "@/utils/excelParser";
 import { getStudentAgeCategory } from "@/utils/studentUtils";
-=======
-import ContractCard from "@/components/ContractCard";
-
-const contracts = [
-  { title: "Lumni Menores de edad", route: "/lumni-menores", type: "lumni" },
-  { title: "Lumni Mayores de edad", route: "/lumni-mayores", type: "lumni" },
-  { title: "Recursos Propios Menores de edad", route: "/rp-menores", type: "rp" },
-  { title: "Recursos Propios Mayores de edad", route: "/rp-mayores", type: "rp" },
-];
->>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
 
 const Index = () => {
   const {
@@ -70,7 +59,6 @@ const Index = () => {
     { installment: number; amount: number; dueDate: string }[]
   >([]);
 
-<<<<<<< HEAD
   const studentAgeCategory = getStudentAgeCategory(
     selectedUserData?.raw as CamperData | undefined,
   );
@@ -276,57 +264,6 @@ const Index = () => {
             </div>
             <p className="text-sm text-slate-300 mb-4">
               Complete el formulario para registrar una nueva plantilla.
-=======
-        <div className="max-w-5xl mx-auto space-y-12">
-          {/* Sección Lumni */}
-          <div>
-            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
-              <span className="w-8 h-[2px] bg-primary"></span>
-              CONTRATOS LUMNI
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contracts.filter(c => c.type === "lumni").map((contract, index) => (
-                <ContractCard
-                  key={index}
-                  title={contract.title}
-                  route={contract.route}
-                  isDisabled={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Sección Recursos Propios */}
-          <div>
-            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
-              <span className="w-8 h-[2px] bg-primary"></span>
-              CONTRATOS RECURSOS PROPIOS
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contracts.filter(c => c.type === "rp").map((contract, index) => (
-                <ContractCard
-                  key={index}
-                  title={contract.title}
-                  route={contract.route}
-                />
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </main>
-
-      <footer className="border-t border-border mt-auto">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Privacidad</a>
-              <a href="#" className="hover:text-foreground transition-colors">Términos</a>
-              <a href="#" className="hover:text-foreground transition-colors">Soporte</a>
-            </div>
-            <p className="text-xs text-muted-foreground tracking-wider">
-              © 2026 CAMPUSLANDS • SECURE ENVIRONMENT
->>>>>>> 30b880f045c4ba8f33252de4a1471789a87e82bc
             </p>
           </div>
 
