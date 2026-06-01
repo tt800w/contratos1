@@ -55,9 +55,43 @@ const hasPaymentPlanTag = (text: string) =>
 // ─────────────────────────────────────────────────────────────────────────────
 const TABLE_TOTAL_WIDTH = 8300; // dxa — área útil completa
 
+type AmortizationRow = {
+  installment: number;
+  amount: number;
+  dueDate: string;
+};
+
+const normalizeAmortizationSchedule = (
+  amortSchedule: AmortizationRow[],
+): AmortizationRow[] => {
+  const ordered = [...amortSchedule].sort(
+    (a, b) => Number(a.installment || 0) - Number(b.installment || 0),
+  );
+  const total = Math.round(
+    ordered.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+  );
+  let accumulated = 0;
+
+  return ordered.map((item, index) => {
+    const isLast = index === ordered.length - 1;
+    const amount = isLast
+      ? Math.max(0, total - accumulated)
+      : Math.max(0, Math.round(Number(item.amount || 0)));
+
+    accumulated += amount;
+
+    return {
+      installment: index + 1,
+      amount,
+      dueDate: item.dueDate,
+    };
+  });
+};
+
 const buildAmortizationTableXml = (
-  amortSchedule: { installment: number; amount: number; dueDate: string }[],
+  amortSchedule: AmortizationRow[],
 ) => {
+  const normalizedSchedule = normalizeAmortizationSchedule(amortSchedule);
   const columns = [
     { title: "#", width: 700 },
     { title: "Fecha", width: 2200 },
@@ -86,12 +120,12 @@ const buildAmortizationTableXml = (
     )
     .join("");
 
-  let remaining = amortSchedule.reduce(
+  let remaining = normalizedSchedule.reduce(
     (sum, item) => sum + Number(item.amount || 0),
     0,
   );
 
-  const rows = amortSchedule
+  const rows = normalizedSchedule
     .map((item, rowIndex) => {
       const amount = Number(item.amount || 0);
       remaining = Math.max(0, remaining - amount);
@@ -107,7 +141,7 @@ const buildAmortizationTableXml = (
       const rowShading = `<w:shd w:val="clear" w:color="auto" w:fill="${rowFill}"/>`;
 
       return (
-        `<w:tr>` +
+        `<w:tr><w:trPr><w:cantSplit/></w:trPr>` +
         cells
           .map((cellText, colIndex) => {
             const align =
@@ -136,7 +170,8 @@ const buildAmortizationTableXml = (
 <w:tbl>
   <w:tblPr>
     <w:tblW w:w="${TABLE_TOTAL_WIDTH}" w:type="dxa"/>
-    <w:tblLayout w:type="fixed"/>
+    <w:tblLayout w:type="autofit"/>
+    <w:tblLook w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
     <w:tblBorders>
       <w:top     w:val="single" w:sz="4" w:space="0" w:color="1F3864"/>
       <w:left    w:val="single" w:sz="4" w:space="0" w:color="1F3864"/>
@@ -165,7 +200,7 @@ const buildAmortizationTableXml = (
 
 const injectAmortizationTableIntoDocument = (
   zip: PizZip,
-  amortSchedule: { installment: number; amount: number; dueDate: string }[],
+  amortSchedule: AmortizationRow[],
 ) => {
   if (!amortSchedule || amortSchedule.length === 0) return;
 
