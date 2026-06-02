@@ -14,6 +14,44 @@ export interface UnifiedContractData {
 
 import { formatCurrencySpanish, numberToSpanishWords } from './numberToWords';
 
+const runDocumentQualityPass = (zip: PizZip) => {
+    const documentXml = zip.file("word/document.xml")?.asText();
+    if (!documentXml) return;
+
+    const getWordParagraphText = (paragraph: string) =>
+        Array.from(paragraph.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g))
+            .map((m) => m[1]).join('').replace(/&[a-z]+;/gi, '');
+
+    const isEmptyWordParagraph = (paragraph: string) =>
+        !getWordParagraphText(paragraph).trim() &&
+        !/<w:(?:drawing|pict|tbl|object|sectPr|br)\b/.test(paragraph);
+
+    let count = 0;
+    let xml = documentXml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
+        if (!isEmptyWordParagraph(p)) {
+            count = 0;
+            return p;
+        }
+        count++;
+        return count > 1 ? '' : p;
+    });
+
+    const startsFlexibleSection = (text: string) =>
+        /^(PAGARÉ\s*(NO\.?|N\.?|#)?|Señores(?:,|\s|$)|ANEXOS?\b|FIRMAS?\b|CONDICIONES ESPECIFICAS\b)/i.test(text.trim());
+
+    xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
+        const text = getWordParagraphText(p);
+        if (startsFlexibleSection(text)) {
+            if (!/<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) && !/<w:pageBreakBefore\b/.test(p)) {
+                return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + p;
+            }
+        }
+        return p;
+    });
+
+    if (xml !== documentXml) zip.file("word/document.xml", xml);
+};
+
 export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const fechaObj = extraData.fechaContrato ? new Date(extraData.fechaContrato + 'T00:00:00') : new Date();
     const dia = fechaObj.getDate().toString();
@@ -151,10 +189,7 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
         const doc = new Docxtemplater(zip, {
             paragraphLoop: true,
             linebreaks: true,
-            delimiters: {
-                start: "{",
-                end: "}"
-            }
+            nullGetter: () => ""
         });
 
         // Add a check for valid data
@@ -164,6 +199,7 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
 
         try {
             doc.render(data);
+            runDocumentQualityPass(doc.getZip());
         } catch (error: any) {
             console.error("Docxtemplater Render Error Object:", error);
 

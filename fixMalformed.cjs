@@ -63,6 +63,39 @@ function buildFinalDoc(sourcePath, destPath) {
     }
     xml = paragraphs.join('</w:p>');
 
+    // 8. Visual Cleanup: Remove excessive empty paragraphs
+    const getWordParagraphText = (paragraph) =>
+        Array.from(paragraph.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g))
+            .map((m) => m[1]).join('').replace(/&[a-z]+;/gi, '');
+
+    const isEmptyWordParagraph = (paragraph) =>
+        !getWordParagraphText(paragraph).trim() &&
+        !/<w:(?:drawing|pict|tbl|object|sectPr|br)\b/.test(paragraph);
+
+    let count = 0;
+    xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
+        if (!isEmptyWordParagraph(p)) {
+            count = 0;
+            return p;
+        }
+        count++;
+        return count > 1 ? '' : p;
+    });
+
+    // 9. Visual Cleanup: Force Page Breaks before specific sections
+    const startsFlexibleSection = (text) =>
+        /^(PAGARÉ\s*(NO\.?|N\.?|#)?|CARTA DE INSTRUCCIONES|ANEXOS?|FIRMAS?|CONDICIONES ESPECIFICAS)\b/i.test(text.trim());
+
+    xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
+        const text = getWordParagraphText(p);
+        if (startsFlexibleSection(text)) {
+            if (!/<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) && !/<w:pageBreakBefore\b/.test(p)) {
+                return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + p;
+            }
+        }
+        return p;
+    });
+
     zip.file('word/document.xml', xml);
     const buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
     fs.writeFileSync(destPath, buffer);
