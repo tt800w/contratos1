@@ -1,138 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 import { renderAsync } from "docx-preview";
-import { FileText, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
+import { FileText, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 
 interface DocxViewerProps {
-  url: string;
-  blob?: Blob | null;
-  title?: string;
+    url: string;
+    blob?: Blob | null;
+    title?: string;
 }
 
-const DocxViewer = ({
-  url,
-  blob,
-  title = "VISTA PREVIA DEL DOCUMENTO",
-}: DocxViewerProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(100);
-  const [isLoading, setIsLoading] = useState(true);
-  const [key, setKey] = useState(0);
+const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxViewerProps) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [zoom, setZoom] = useState(100);
+    const [isLoading, setIsLoading] = useState(true);
+    const [key, setKey] = useState(0);
 
-  const reloadDocument = () => {
-    setKey((prev) => prev + 1);
-  };
-
-  useEffect(() => {
-    const loadDocx = async () => {
-      if (!containerRef.current) return;
-
-      if (!blob && !url) {
-        containerRef.current.innerHTML =
-          '<div class="p-8 text-muted-foreground text-center">Seleccione un camper y actualice la vista previa para ver el documento.</div>';
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-
-      try {
-        let docData: Blob;
-
-        if (blob) {
-          docData = blob;
-        } else if (url) {
-          const response = await fetch(url);
-          if (!response.ok) throw new Error("Error loading document");
-          docData = await response.blob();
-        } else {
-          return;
-        }
-
-        containerRef.current.innerHTML = "";
-
-        await renderAsync(docData, containerRef.current, undefined, {
-          inWrapper: false,
-          ignoreWidth: false,
-          ignoreHeight: false,
-          experimental: true,
-          useBase64URL: true,
-          breakPages: true,
-          renderHeaders: true,
-          renderFooters: true,
-        });
-      } catch (error) {
-        console.error("Error displaying document:", error);
-        if (containerRef.current) {
-          containerRef.current.innerHTML =
-            '<div class="p-8 text-red-500 text-center">Error al cargar el documento.</div>';
-        }
-      } finally {
-        setIsLoading(false);
-      }
+    const reloadDocument = () => {
+        setKey(prev => prev + 1);
     };
 
-    loadDocx();
-  }, [url, blob, key]);
+    useEffect(() => {
+        const loadDocx = async () => {
+            if (!containerRef.current) return;
 
-  return (
-    <div className="flex-1 bg-muted/30 p-2 md:p-4 h-[calc(100vh-65px)] overflow-hidden flex flex-col">
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4 bg-card p-3 rounded-lg border shadow-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <FileText className="w-4 h-4" />
-          <span className="text-xs font-medium tracking-wider uppercase">
-            {title}
-          </span>
-        </div>
+            // Si no hay nada que cargar, limpiamos y salimos sin error
+            if (!blob && !url) {
+                containerRef.current.innerHTML = '<div class="p-8 text-muted-foreground text-center">Seleccione un camper y actualice la vista previa para ver el documento.</div>';
+                setIsLoading(false);
+                return;
+            }
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom(Math.max(50, zoom - 10))}
-            className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm"
-            title="Reducir Zoom"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-mono w-12 text-center">{zoom}%</span>
-          <button
-            onClick={() => setZoom(Math.min(200, zoom + 10))}
-            className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm"
-            title="Aumentar Zoom"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <button
-            onClick={reloadDocument}
-            className="p-1.5 bg-background rounded-md hover:bg-secondary transition-colors border shadow-sm ml-2"
-            title="Recargar Documento"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+            setIsLoading(true);
 
-      <div className="flex-1 overflow-auto bg-gray-400/50 rounded-xl border border-border flex justify-center items-start p-4">
-        {isLoading && (
-          <div className="flex items-center gap-2 text-muted-foreground mt-20 absolute z-10">
-            <RotateCw className="w-5 h-5 animate-spin" />
-            <span>Cargando documento...</span>
-          </div>
-        )}
+            try {
+                let docData: Blob;
 
-        <div
-          id="docx-reader-container"
-          className="origin-top bg-transparent mb-8"
-          style={{
-            transform: `scale(${zoom / 100})`,
-            transition: "transform 0.2s ease-out",
-            width: "210mm",
-            margin: "0 auto",
-          }}
-        >
-          <div ref={containerRef} className="docx-render-content" />
-        </div>
-      </div>
+                if (blob) {
+                    docData = blob;
+                } else if (url) {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Error loading document");
+                    docData = await response.blob();
+                } else {
+                    return;
+                }
 
-<<<<<<< HEAD
                 containerRef.current.innerHTML = "";
 
                 await renderAsync(docData, containerRef.current, undefined, {
@@ -260,28 +171,24 @@ const DocxViewer = ({
             </div>
 
             <style>{`
-=======
-      <style>{`
->>>>>>> f8e3dc4cd7a30f5d8fe817c1084cfa134aa9fb45
         .docx-render-content {
           width: 100% !important;
           background-color: transparent !important;
         }
-
+        /* Estilo de página individual */
         .docx-render-content section {
-<<<<<<< HEAD
           width: 210mm !important;
           min-height: 297mm !important;
           padding: 1.5cm 2cm 1.5cm 2cm !important; /* Margen estándar y ceñido para plataformas PDF, eliminando espacios vacíos */
           margin-bottom: 20px !important;
-=======
->>>>>>> f8e3dc4cd7a30f5d8fe817c1084cfa134aa9fb45
           background: white !important;
           box-shadow: 0 0 10px rgba(0,0,0,0.2) !important;
-          margin-bottom: 20px !important;
+          position: relative !important;
+          display: block !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
         }
 
-<<<<<<< HEAD
         /* Real Header Overlay Styles */
         .brand-header-overlay {
             position: relative;
@@ -366,30 +273,19 @@ const DocxViewer = ({
 
         /* Respetar saltos de página de la librería */
         .docx_page_break, .docx-render-content .break-after {
-=======
-        .docx_page_break,
-        .docx-render-content .break-after {
->>>>>>> f8e3dc4cd7a30f5d8fe817c1084cfa134aa9fb45
           display: block !important;
           page-break-after: always !important;
           height: 0 !important;
           margin: 0 !important;
         }
-<<<<<<< HEAD
         /* Tablas */
         .docx-render-content table {
           width: 100% !important;
           border-collapse: collapse !important;
-=======
-
-        #docx-reader-container.exporting-pdf .docx-render-content section {
-          box-shadow: none !important;
-          margin-bottom: 0 !important;
->>>>>>> f8e3dc4cd7a30f5d8fe817c1084cfa134aa9fb45
         }
       `}</style>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default DocxViewer;

@@ -133,7 +133,6 @@
     @apply w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300;
   }
 
-<<<<<<< HEAD
   /* Document Rendering Styles (Premium) */
   .docx-render-content p {
     border-bottom: none !important;
@@ -175,8 +174,6 @@
     text-align: justify !important;
   }
 
-=======
->>>>>>> f8e3dc4cd7a30f5d8fe817c1084cfa134aa9fb45
   /* Invert calendar icon color for dark theme visibility */
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);

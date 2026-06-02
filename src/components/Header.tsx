@@ -1,14 +1,12 @@
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   showBack?: boolean;
   title?: string;
-  action?: ReactNode;
 }
 
-const Header = ({ showBack = false, title, action }: HeaderProps) => {
+const Header = ({ showBack = false, title }: HeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -34,11 +32,8 @@ const Header = ({ showBack = false, title, action }: HeaderProps) => {
         {/* Center spacing or empty div if needed */}
         <div></div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-xs font-medium tracking-wider text-muted-foreground">
-            {title || "AUTOMATIZACIÓN DE CONTRATOS"}
-          </div>
-          {action}
+        <div className="text-xs font-medium tracking-wider text-muted-foreground">
+          {title || "AUTOMATIZACIÓN DE CONTRATOS"}
         </div>
       </div>
     </header>
