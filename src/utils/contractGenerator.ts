@@ -39,14 +39,26 @@ const runDocumentQualityPass = (zip: PizZip) => {
     const startsFlexibleSection = (text: string) =>
         /^(PAGARÉ\s*(NO\.?|N\.?|#)?|Señores(?:,|\s|$)|ANEXOS?\b|FIRMAS?\b|CONDICIONES ESPECIFICAS\b)/i.test(text.trim());
 
+    let lastWasPageBreak = false;
     xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
         const text = getWordParagraphText(p);
+        const hasNativePageBreak = /<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) || /<w:pageBreakBefore\b/.test(p);
+
+        let result = p;
         if (startsFlexibleSection(text)) {
-            if (!/<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) && !/<w:pageBreakBefore\b/.test(p)) {
-                return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + p;
+            if (!hasNativePageBreak && !lastWasPageBreak) {
+                result = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + p;
+                lastWasPageBreak = true;
             }
         }
-        return p;
+
+        if (hasNativePageBreak || result !== p) {
+            lastWasPageBreak = true;
+        } else if (text.trim() !== "") {
+            lastWasPageBreak = false;
+        }
+
+        return result;
     });
 
     if (xml !== documentXml) zip.file("word/document.xml", xml);
@@ -123,10 +135,10 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "DIRECCION": raw.direccionCamper || "",
         "CIUDAD": "Bucaramanga",
         "CIUDAD DE RESIDENCIA": "Bucaramanga",
-        "TELEFONO CAMPER": raw.telefonoCamper || "",
-        "CELULAR CAMPER": raw.telefonoCamper || "",
-        "CELULAR": raw.telefonoCamper || "",
-        "TELEFONO": raw.telefonoCamper || "",
+        "TELEFONO CAMPER": raw.celularCamper || raw.telefonoCamper || "",
+        "CELULAR CAMPER": raw.celularCamper || raw.telefonoCamper || "",
+        "CELULAR": raw.celularCamper || raw.telefonoCamper || "",
+        "TELEFONO": raw.celularCamper || raw.telefonoCamper || "",
 
         "EMAIL CAMPER": raw.emailCamper || raw.emailRepresentante || "",
         "EMAIL REP CAMPER": raw.emailRepresentante || "",
