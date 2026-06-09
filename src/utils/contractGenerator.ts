@@ -40,12 +40,24 @@ const runDocumentQualityPass = (zip: PizZip) => {
         /^(PAGARÉ\s*(NO\.?|N\.?|#)?|Señores(?:,|\s|$)|ANEXOS?\b|FIRMAS?\b|CONDICIONES ESPECIFICAS\b)/i.test(text.trim());
 
     let lastWasPageBreak = false;
+    let inNotificacionesClause = false;
     xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
         const text = getWordParagraphText(p);
         const hasNativePageBreak = /<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) || /<w:pageBreakBefore\b/.test(p);
 
+        if (/CLÁUSULA DÉCIMA CUARTA: NOTIFICACIONES/i.test(text)) {
+            inNotificacionesClause = true;
+        }
+
         let result = p;
-        if (startsFlexibleSection(text)) {
+        let shouldBreak = startsFlexibleSection(text);
+        
+        if (/^CAMPUSLANDS S\.A\.S\. BIC,/i.test(text.trim()) && inNotificacionesClause) {
+            shouldBreak = true;
+            inNotificacionesClause = false;
+        }
+
+        if (shouldBreak) {
             if (!hasNativePageBreak && !lastWasPageBreak) {
                 result = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + p;
                 lastWasPageBreak = true;
