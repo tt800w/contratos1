@@ -60,7 +60,19 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                 const parsedData: CamperData[] = jsonData.map((row: any) => {
                     const res = {
                         nombreRepresentante: getValue(row, ['Nombre y apellido del acudiente', 'Nombre completo representante', 'Nombre Representante', 'Acudiente', 'Nombre del acudiente', 'Nombres y apellidos del acudiente', 'Nombre Acudiente', 'Nombre del Representante', 'Nombres y Apellidos Representante Legal', 'Nombre Completo del Acudiente', 'Nombre de acudiente', 'Representante legal', 'Representante', 'Nombre Padre/Madre/Acudiente'], { include: ['nombre'], exclude: ['camper', 'estudiante'] }),
-                        cedulaRepresentante: getValue(row, ['Número de documento del acudiente', 'Número cédula representante', 'Cédula Representante', 'Cedula Representante', 'CC Representante', 'Cédula de ciudadanía acudiente', 'Cédula del acudiente', 'Documento del acudiente', 'No. Documento Acudiente'], { include: ['cedula', 'acudiente'] }) || getValue(row, [], { include: ['documento', 'acudiente'] }),
+                        cedulaRepresentante: getValue(row, [
+                            'Número de documento del acudiente', 'Número de documento del representante',
+                            'Número de documento acudiente', 'Número de documento representante',
+                            'Número cédula representante', 'Cédula Representante', 'Cedula Representante', 
+                            'CC Representante', 'Cédula de ciudadanía acudiente', 'Cédula del acudiente', 
+                            'Documento del acudiente', 'No. Documento Acudiente', 'No. Documento Representante',
+                            'Documento Representante', 'Número de documento Padre/Madre/Acudiente',
+                            'No. Documento Padre/Madre/Acudiente', 'Cédula Padre/Madre/Acudiente'
+                        ]) || 
+                        getValue(row, [], { include: ['cedula', 'acudiente'] }) || 
+                        getValue(row, [], { include: ['documento', 'acudiente'] }) ||
+                        getValue(row, [], { include: ['cedula', 'representante'] }) ||
+                        getValue(row, [], { include: ['documento', 'representante'] }),
                         nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre'], { include: ['nombre', 'camper'] }) || getValue(row, [], { include: ['nombre', 'estudiante'] }),
                         documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento'], { include: ['documento', 'camper'] }) || getValue(row, [], { include: ['cedula', 'camper'] }),
                         direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion'], { include: ['direccion', 'camper'] }) || getValue(row, [], { include: ['dirección', 'camper'] }),

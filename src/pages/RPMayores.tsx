@@ -13,8 +13,13 @@ const RPMayores = () => {
     const { users, selectedUser, setSelectedUser, selectedUserData, handleFileUpload } = useCamperData();
 
     // Campos específicos
+    const [jornada, setJornada] = useState<'diurna' | 'nocturna'>('diurna');
     const [pagare, setPagare] = useState("");
     const [fechaContrato, setFechaContrato] = useState("");
+
+    const templateUrl = jornada === 'diurna' 
+        ? "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx"
+        : "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad Nocturna.docx";
     const [cuotas, setCuotas] = useState("1");
     const [modoPago, setModoPago] = useState<'auto' | 'manual'>('auto');
     const [manualCuotas, setManualCuotas] = useState<number[]>([13000000]);
@@ -69,7 +74,7 @@ const RPMayores = () => {
 
         try {
             const blob = await generateContract(
-                "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx",
+                templateUrl,
                 data, "preview.docx", true
             );
             if (blob instanceof Blob) setPreviewBlob(blob);
@@ -87,8 +92,20 @@ const RPMayores = () => {
             onUserSelect={setSelectedUser}
             onFileUpload={handleFileUpload}
             previewBlob={previewBlob}
-            templateUrl="/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx"
+            templateUrl={templateUrl}
         >
+            <div className="mb-3">
+                <label className="section-label mb-1 block">Jornada de Estudio</label>
+                <select
+                    value={jornada}
+                    onChange={(e) => setJornada(e.target.value as 'diurna' | 'nocturna')}
+                    className="w-full p-2 text-sm rounded-md border border-input bg-background"
+                >
+                    <option value="diurna">Diurna</option>
+                    <option value="nocturna">Nocturna</option>
+                </select>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 mb-3">
                 <ContractField label="Pagaré" value={pagare} onChange={setPagare} placeholder="#" />
                 <ContractField label="Fecha" value={fechaContrato} onChange={setFechaContrato} type="date" />
@@ -220,7 +237,7 @@ const RPMayores = () => {
                         const data = validateAndPrepare();
                         if (!data) return;
                         const nameToUse = getContractFileName(pagare, "Recursos Propios", selectedUserData.name, 'docx', customFileName);
-                        await generateContract("/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx", data, nameToUse);
+                        await generateContract(templateUrl, data, nameToUse);
                         toast.success("Archivo Word generado");
                     }} disabled={!selectedUser}>
                     <FileDown className="w-4 h-4" /> WORD
@@ -231,7 +248,7 @@ const RPMayores = () => {
                         if (!data) return;
                         const nameToUse = getContractFileName(pagare, "Recursos Propios", selectedUserData.name, 'pdf', customFileName);
                         toast.promise(async () => {
-                            const blob = await generateContract("/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx", data, "temp.docx", true);
+                            const blob = await generateContract(templateUrl, data, "temp.docx", true);
                             await downloadAsNativePDF(blob as Blob, nameToUse);
                         }, { loading: 'Generando PDF...', success: 'PDF descargado', error: 'Error al generar PDF' });
                     }} disabled={!selectedUser}>
@@ -245,7 +262,7 @@ const RPMayores = () => {
                     if (!data) return;
                     const nameToUse = getContractFileName(pagare, "Recursos Propios", selectedUserData.name, 'docx', customFileName);
                     toast.promise(async () => {
-                        const blob = await generateContract("/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx", data, "contrato.docx", true);
+                        const blob = await generateContract(templateUrl, data, "contrato.docx", true);
                         const url = await uploadToZapSign(blob as Blob, nameToUse);
                         window.open(url, '_blank');
                     }, { loading: 'Enviando a ZapSign...', success: 'Enlace de firma abierto', error: 'Error al subir a ZapSign' });

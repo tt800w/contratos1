@@ -41,18 +41,21 @@ const runDocumentQualityPass = (zip: PizZip) => {
 
     let lastWasPageBreak = false;
     let inNotificacionesClause = false;
+    
     xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
         const text = getWordParagraphText(p);
         const hasNativePageBreak = /<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) || /<w:pageBreakBefore\b/.test(p);
 
-        if (/CLÁUSULA DÉCIMA CUARTA: NOTIFICACIONES/i.test(text)) {
+        if (/CLÁUSULA.*NOTIFICACIONES/i.test(text)) {
             inNotificacionesClause = true;
+        } else if (/CLÁUSULA/i.test(text)) {
+            inNotificacionesClause = false;
         }
 
         let result = p;
         let shouldBreak = startsFlexibleSection(text);
-        
-        if (/^CAMPUSLANDS S\.A\.S\. BIC,/i.test(text.trim()) && inNotificacionesClause) {
+
+        if (/^En constancia de(?: aceptación| lo anterior)/i.test(text.trim()) && inNotificacionesClause) {
             shouldBreak = true;
             inNotificacionesClause = false;
         }
@@ -84,12 +87,14 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const ano = fechaObj.getFullYear().toString();
 
     const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
+    const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
+    const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
+
     let planPagos = "";
     let cuotasList: any[] = [];
 
     // Lógica específica para Recursos Propios y Pronto Pago
     if (extraData.isRP || extraData.isPP) {
-        const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
 
         if (extraData.isPP) {
             const fecha = extraData.fechasCuotas?.[0];
@@ -112,9 +117,6 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
                 });
             });
         } else {
-            const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
-            const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
-            const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
             const ajusteUltimaCuota = TOTAL_OBJETIVO - (valorCuota * (numCuotasTotal - 1));
 
             for (let i = 1; i <= numCuotasTotal; i++) {
@@ -165,6 +167,11 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "ACUDIENTE": raw.nombreRepresentante || "",
         "CEDULA REP DEL CAMPER": raw.cedulaRepresentante || "",
         "CEDULA REPRESENTANTE": raw.cedulaRepresentante || "",
+        "CEDULA DEL REPRESENTANTE": raw.cedulaRepresentante || "",
+        "DOCUMENTO REPRESENTANTE": raw.cedulaRepresentante || "",
+        "DOCUMENTO DEL REPRESENTANTE": raw.cedulaRepresentante || "",
+        "NUMERO DE DOCUMENTO REPRESENTANTE": raw.cedulaRepresentante || "",
+        "NUMERO DE CEDULA REPRESENTANTE": raw.cedulaRepresentante || "",
         "CEDULA ACUDIENTE": raw.cedulaRepresentante || "",
         "CEDULA DEL ACUDIENTE": raw.cedulaRepresentante || "",
         "DOCUMENTO ACUDIENTE": raw.cedulaRepresentante || "",
@@ -199,11 +206,18 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "CUOTAS_LIST": cuotasList,
         "FECHA_PAGO": extraData.fechasCuotas?.[0] || "",
         "FECHA_LIMITE_PAGO": extraData.fechasCuotas?.[0] || "",
-        "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000))}` : "",
-        "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim() : "",
-        "VALOR_TOTAL_LETRAS_UPPER": extraData.isRP || extraData.isPP ? numberToSpanishWords(extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000)).trim().toUpperCase() : "",
+        "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(TOTAL_OBJETIVO)}` : "",
+        "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(TOTAL_OBJETIVO).trim() : "",
+        "VALOR_TOTAL_LETRAS_UPPER": extraData.isRP || extraData.isPP ? numberToSpanishWords(TOTAL_OBJETIVO).trim().toUpperCase() : "",
         "VALOR_FORMACION_NUMEROS": extraData.valorFormacion ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(parseInt(extraData.valorFormacion))}` : "",
         "VALOR_FORMACION_LETRAS": extraData.valorFormacion ? numberToSpanishWords(parseInt(extraData.valorFormacion)).trim() : "",
+        "VALOR_CUOTA_NUMEROS": `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(valorCuota)}`,
+        "VALOR_CUOTA_LETRAS": numberToSpanishWords(valorCuota).trim(),
+        "VALOR_CUOTA_LETRAS_UPPER": numberToSpanishWords(valorCuota).trim().toUpperCase(),
+        "CANTIDAD_CUOTAS_LETRAS": numberToSpanishWords(numCuotasTotal).trim(),
+        "CANTIDAD_CUOTAS_LETRAS_UPPER": numberToSpanishWords(numCuotasTotal).trim().toUpperCase(),
+        "NUMERO_CUOTAS_LETRAS": numberToSpanishWords(numCuotasTotal).trim(),
+        "NUMERO_CUOTAS_LETRAS_UPPER": numberToSpanishWords(numCuotasTotal).trim().toUpperCase(),
 
         // Include everything from extraData just in case
         ...extraData
@@ -225,41 +239,32 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
         const arrayBuffer = await response.arrayBuffer();
         const zip = new PizZip(arrayBuffer);
 
-        const doc = new Docxtemplater(zip, {
-            paragraphLoop: true,
-            linebreaks: true,
-            nullGetter: () => ""
-        });
-
         // Add a check for valid data
         if (!data || Object.keys(data).length === 0) {
             console.warn("Contract data is empty!");
         }
 
+        let doc;
         try {
+            doc = new Docxtemplater(zip, {
+                paragraphLoop: true,
+                linebreaks: true,
+                nullGetter: () => ""
+            });
             doc.render(data);
             runDocumentQualityPass(doc.getZip());
         } catch (error: any) {
             console.error("Docxtemplater Render Error Object:", error);
-
-            // Check for MultiError from docxtemplater with explicit properties check
-            if (error.properties && Array.isArray(error.properties.errors)) {
-                if (error.properties.errors.length > 0) {
-                    const errorMessages = error.properties.errors
-                        .map((err: any) => {
-                            // Try various properties where the tag name might be
-                            const tag = err.properties?.id || err.properties?.name || err.properties?.tagName || "etiqueta desconocida";
-                            const expl = err.properties?.explanation || err.message || "Error de sintaxis";
-                            // Translate common errors
-                            const translatedExpl = expl.replace("The tag beginning with", "La etiqueta que empieza por")
-                                .replace("is unopened", "no está abierta correctamente")
-                                .replace("is unclosed", "no está cerrada correctamente");
-                            return `- Error en etiqueta '${tag}': ${translatedExpl}`;
-                        })
-                        .join("\n");
-
-                    throw new Error(`La plantilla tiene errores de formato (MultiError):\n${errorMessages}`);
-                }
+            
+            if (error.properties && error.properties.errors) {
+                console.error("ERRORES DETALLADOS (FÁCIL DE LEER):");
+                error.properties.errors.forEach((err: any, index: number) => {
+                    const tag = err.properties?.id || err.properties?.name || err.properties?.tagName || "desconocida";
+                    const explanation = err.properties?.explanation || err.message;
+                    console.error(`Error #${index + 1}: Etiqueta '${tag}' -> ${explanation}`);
+                    alert(`🚨 ERROR EN PLANTILLA DOCX:\n\nLa etiqueta '${tag}' está mal escrita.\n\nDetalle: ${explanation}\n\nPor favor corrige esto en el archivo de Word.`);
+                });
+                throw new Error("MultiError: Revisa la consola y las alertas para corregir las etiquetas.");
             }
 
             // Fallback: Dump properties if they exist but we couldn't parse them smoothly
