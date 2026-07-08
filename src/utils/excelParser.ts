@@ -73,13 +73,32 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                         getValue(row, [], { include: ['documento', 'acudiente'] }) ||
                         getValue(row, [], { include: ['cedula', 'representante'] }) ||
                         getValue(row, [], { include: ['documento', 'representante'] }),
-                        nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre'], { include: ['nombre', 'camper'] }) || getValue(row, [], { include: ['nombre', 'estudiante'] }),
-                        documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento'], { include: ['documento', 'camper'] }) || getValue(row, [], { include: ['cedula', 'camper'] }),
-                        direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion'], { include: ['direccion', 'camper'] }) || getValue(row, [], { include: ['dirección', 'camper'] }),
+                        nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre', 'Nombres', 'Nombres y Apellidos', 'Nombre completo'], { include: ['nombre', 'camper'] }) || 
+                                      getValue(row, [], { include: ['nombre', 'estudiante'] }) || 
+                                      getValue(row, [], { include: ['nombre'], exclude: ['acudiente', 'representante', 'padre', 'madre'] }),
+                        documentoCamper: getValue(row, ['Número de documento', 'Número tarjeta identidad Camper', 'Número cédula Camper', 'Tarjeta Identidad', 'TI', 'Cédula', 'Cedula', 'Documento', 'Cédula de ciudadanía', 'CC'], { include: ['documento', 'camper'] }) || 
+                                         getValue(row, [], { include: ['cedula', 'camper'] }) || 
+                                         getValue(row, [], { include: ['documento'], exclude: ['acudiente', 'representante', 'padre', 'madre'] }) || 
+                                         getValue(row, [], { include: ['cedula'], exclude: ['acudiente', 'representante', 'padre', 'madre'] }),
+                        direccionCamper: getValue(row, ['Dirección de residencia', 'Dirección física Camper', 'Dirección', 'Direccion'], { include: ['direccion', 'camper'] }) || 
+                                         getValue(row, [], { include: ['dirección', 'camper'] }) || 
+                                         getValue(row, [], { include: ['direccion'], exclude: ['acudiente', 'representante'] }) || 
+                                         getValue(row, [], { include: ['dirección'], exclude: ['acudiente', 'representante'] }),
                         emailRepresentante: getValue(row, ['Email representante Camper', 'Email acudiente', 'Correo acudiente', 'EMAIL REP CAMPER', 'Correo del Acudiente', 'Email del Acudiente'], { include: ['correo', 'acudiente'] }) || getValue(row, [], { include: ['email', 'acudiente'] }),
-                        emailCamper: getValue(row, ['Email Camper', 'Correo Camper', 'Correo Estudiante', 'Email Estudiante', 'Dirección de correo electrónico', 'Email', 'Correo', 'Correo Electrónico'], { include: ['correo', 'camper'] }) || getValue(row, [], { include: ['email', 'camper'] }),
-                        celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER'], { include: ['celular', 'camper'] }) || getValue(row, [], { include: ['telefono', 'camper'] }),
-                        telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER', 'Celular del acudiente', 'Teléfono del acudiente'], { include: ['celular', 'acudiente'] }) || getValue(row, [], { include: ['telefono', 'acudiente'] }),
+                        emailCamper: getValue(row, ['Email Camper', 'Correo Camper', 'Correo Estudiante', 'Email Estudiante', 'Dirección de correo electrónico', 'Email', 'Correo', 'Correo Electrónico'], { include: ['correo', 'camper'] }) || 
+                                     getValue(row, [], { include: ['email', 'camper'] }) || 
+                                     getValue(row, [], { include: ['correo'], exclude: ['acudiente', 'representante'] }) || 
+                                     getValue(row, [], { include: ['email'], exclude: ['acudiente', 'representante'] }),
+                        celularCamper: getValue(row, ['Número de celular', 'Celular Camper', 'Celular', 'Teléfono', 'Telefono', 'CELULAR CAMPER'], { include: ['celular', 'camper'] }) || 
+                                       getValue(row, [], { include: ['telefono', 'camper'] }) || 
+                                       getValue(row, [], { include: ['celular'], exclude: ['acudiente', 'representante'] }) || 
+                                       getValue(row, [], { include: ['telefono'], exclude: ['acudiente', 'representante'] }),
+                        telefonoRepresentante: getValue(row, ['Número de contacto del acudiente', '# contacto del acudiente', 'Teléfono Representante', 'Telefono Representante', 'TELEFONO REP CAMPER', 'Celular del acudiente', 'Teléfono del acudiente'], { include: ['celular', 'acudiente'] }) || 
+                                               getValue(row, [], { include: ['telefono', 'acudiente'] }) || 
+                                               getValue(row, [], { include: ['contacto', 'acudiente'] }) || 
+                                               getValue(row, [], { include: ['celular', 'representante'] }) || 
+                                               getValue(row, [], { include: ['telefono', 'representante'] }) || 
+                                               getValue(row, [], { include: ['contacto', 'representante'] }),
                     };
                     console.log("Fila mapeada:", res);
                     return res;
