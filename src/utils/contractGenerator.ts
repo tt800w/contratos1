@@ -196,6 +196,11 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "CELULAR ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
         "TELEFONO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
         "CELULAR DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
+        "CONTACTO ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
+        "CONTACTO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
+        "NUMERO ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
+        "NUMERO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
+        "NUMERO DE CONTACTO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
         
         "CORREO ACUDIENTE": !extraData.isMinor ? raw.emailCamper : (raw.emailRepresentante || ""),
         "CORREO DEL ACUDIENTE": !extraData.isMinor ? raw.emailCamper : (raw.emailRepresentante || ""),
