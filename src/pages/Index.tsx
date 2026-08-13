@@ -34,7 +34,7 @@ const Index = () => {
                   key={index}
                   title={contract.title}
                   route={contract.route}
-                  isDisabled={true}
+                  isDisabled={false}
                 />
               ))}
             </div>

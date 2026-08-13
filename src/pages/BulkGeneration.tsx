@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Upload, Folder, Play, CheckCircle, AlertCircle, FileSpreadsheet, Download, RefreshCw } from "lucide-react";
+import { Upload, Folder, Play, CheckCircle, AlertCircle, FileSpreadsheet, Download, RefreshCw, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
@@ -15,6 +16,7 @@ interface ProcessResult {
 }
 
 export default function BulkGeneration() {
+  const navigate = useNavigate();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [folderName, setFolderName] = useState("Contratos Masivos");
   const [file, setFile] = useState<File | null>(null);
@@ -313,9 +315,18 @@ export default function BulkGeneration() {
     <div className="min-h-screen bg-background text-foreground p-6 font-sans">
       <div className="w-full max-w-[95%] mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="text-primary"/> Generación Masiva</h1>
-            <p className="text-muted-foreground text-sm">Validación estricta y carga automática a Google Drive.</p>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate("/")} 
+              className="p-2 hover:bg-secondary rounded-full transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground"
+              title="Volver al inicio"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="text-primary"/> Generación Masiva</h1>
+              <p className="text-muted-foreground text-sm">Validación estricta y carga automática a Google Drive.</p>
+            </div>
           </div>
           <button onClick={downloadTemplate} className="secondary-button text-xs flex items-center gap-2 px-3 py-2 border border-primary text-primary rounded-md hover:bg-primary/10">
             <Download className="w-4 h-4" /> DESCARGAR PLANTILLA
