@@ -80,7 +80,21 @@ const runDocumentQualityPass = (zip: PizZip) => {
 };
 
 export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
-    const fechaObj = extraData.fechaContrato ? new Date(extraData.fechaContrato + 'T00:00:00') : new Date();
+    let fechaObj = new Date();
+    if (extraData.fechaContrato) {
+        // Tratar de parsear DD/MM/YYYY o YYYY-MM-DD
+        const parts = extraData.fechaContrato.includes('/') ? extraData.fechaContrato.split('/') : extraData.fechaContrato.split('-');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                // Formato YYYY-MM-DD
+                fechaObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            } else {
+                // Formato DD/MM/YYYY
+                fechaObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+        }
+    }
+
     const dia = fechaObj.getDate().toString();
     const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     const mes = meses[fechaObj.getMonth()];
@@ -155,9 +169,9 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "DOCUMENTO CAMPER": raw.documentoCamper || "",
         "DOCUMENTO DEL CAMPER": raw.documentoCamper || "",
 
-        "DIRECCION FISICA CAMPER": raw.direccionCamper || "",
-        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper || "",
-        "DIRECCION": raw.direccionCamper || "",
+        "DIRECCION FISICA CAMPER": raw.direccionCamper ? raw.direccionCamper : "No hay ninguna dirección registrada",
+        "DIRECCION FISICA DEL CAMPER": raw.direccionCamper ? raw.direccionCamper : "No hay ninguna dirección registrada",
+        "DIRECCION": raw.direccionCamper ? raw.direccionCamper : "No hay ninguna dirección registrada",
         "CIUDAD": "Bucaramanga",
         "CIUDAD DE RESIDENCIA": "Bucaramanga",
         "TELEFONO CAMPER": raw.celularCamper || raw.telefonoCamper || "",

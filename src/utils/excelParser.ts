@@ -5,12 +5,22 @@ export interface CamperData {
     nombreRepresentante: string;
     cedulaRepresentante: string;
     nombreCamper: string;
+    tipoDocumentoCamper: string; // "CC" o "TI"
     documentoCamper: string;
     direccionCamper: string;
     emailRepresentante: string;
     emailCamper: string;
     celularCamper: string;
     telefonoRepresentante: string;
+    
+    // Campos extra para generación masiva
+    pagare?: string;
+    jornada?: string;
+    fechaContrato?: string;
+    valorFormacion?: string;
+    cuotas?: string;
+    valorTotalObjetivo?: string;
+    cuotasDetalle?: { valor: number; fecha: string }[];
 }
 
 // Helper to find value from a row checking multiple possible headers
@@ -50,10 +60,10 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                const workbook = xlsx.read(data, { type: 'binary' });
+                const workbook = xlsx.read(data, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
-                const jsonData = xlsx.utils.sheet_to_json(sheet);
+                const jsonData = xlsx.utils.sheet_to_json(sheet, { raw: false, dateNF: 'dd/mm/yyyy' });
 
                 console.log("Excel Headers (First Row keys):", Object.keys(jsonData[0] || {}));
 
@@ -73,6 +83,7 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                         getValue(row, [], { include: ['documento', 'acudiente'] }) ||
                         getValue(row, [], { include: ['cedula', 'representante'] }) ||
                         getValue(row, [], { include: ['documento', 'representante'] }),
+                        tipoDocumentoCamper: getValue(row, ['Tipo de Documento Camper', 'Tipo Documento Camper', 'Tipo Documento', 'Tipo Doc', 'Tipo Doc Camper', 'TD', 'T.D.'], { include: ['tipo', 'documento'] }) || 'TI', // Por defecto TI si no se especifica
                         nombreCamper: getValue(row, ['Nombre completo Camper', 'Nombre Camper (estudiante)', 'Nombre Camper', 'Estudiante', 'Nombre', 'Nombres', 'Nombres y Apellidos', 'Nombre completo'], { include: ['nombre', 'camper'] }) || 
                                       getValue(row, [], { include: ['nombre', 'estudiante'] }) || 
                                       getValue(row, [], { include: ['nombre'], exclude: ['acudiente', 'representante', 'padre', 'madre'] }),
@@ -99,7 +110,35 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                                                getValue(row, [], { include: ['celular', 'representante'] }) || 
                                                getValue(row, [], { include: ['telefono', 'representante'] }) || 
                                                getValue(row, [], { include: ['contacto', 'representante'] }),
+                        // Campos Masivos
+                        pagare: getValue(row, ['Pagaré', 'Pagare', '# Pagare', 'Numero Pagare']),
+                        jornada: getValue(row, ['Jornada', 'Jornada de Estudio', 'Jornada Estudio'], { include: ['jornada'] }) || 'diurna',
+                        fechaContrato: getValue(row, ['Fecha', 'Fecha Contrato', 'Fecha de Contrato']),
+                        valorFormacion: getValue(row, ['Valor Formación', 'Valor Formacion', 'Valor Total de Formación', 'Valor Total']),
+                        cuotas: getValue(row, ['Cuotas', 'Número de Cuotas', 'Numero Cuotas', 'N Cuotas']),
+                        valorTotalObjetivo: getValue(row, ['Valor Total Objetivo', 'Valor Objetivo', 'Total Objetivo']),
                     };
+
+                    // Extraer detalle de cuotas (hasta 20)
+                    const cuotasDetalle: { valor: number; fecha: string }[] = [];
+                    for (let i = 1; i <= 20; i++) {
+                        const valorCuotaStr = getValue(row, [`Cuota ${i}`, `Valor Cuota ${i}`]);
+                        const fechaCuota = getValue(row, [`Fecha Cuota ${i}`, `Vencimiento Cuota ${i}`]);
+                        
+                        if (valorCuotaStr) {
+                            const valorParsed = parseInt(valorCuotaStr.replace(/\D/g, ''));
+                            if (!isNaN(valorParsed) && valorParsed > 0) {
+                                cuotasDetalle.push({
+                                    valor: valorParsed,
+                                    fecha: fechaCuota || ''
+                                });
+                            }
+                        }
+                    }
+                    if (cuotasDetalle.length > 0) {
+                        res.cuotasDetalle = cuotasDetalle;
+                    }
+
                     console.log("Fila mapeada:", res);
                     return res;
                 });
