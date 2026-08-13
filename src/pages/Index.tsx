@@ -40,11 +40,26 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Sección Recursos Propios */}
+          {/* Sección Recursos Propios (Masivo) */}
           <div>
             <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
               <span className="w-8 h-[2px] bg-primary"></span>
-              CONTRATOS RECURSOS PROPIOS
+              GENERACIÓN MASIVA
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ContractCard
+                title="Generación Masiva (Recursos Propios)"
+                route="/masivo-rp"
+                isDisabled={false}
+              />
+            </div>
+          </div>
+
+          {/* Sección Recursos Propios (Unitaria) */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-primary"></span>
+              GENERACIÓN UNITARIA (RP)
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {contracts.filter(c => c.type === "rp").map((contract, index) => (

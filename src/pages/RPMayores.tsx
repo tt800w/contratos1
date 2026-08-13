@@ -42,12 +42,10 @@ const RPMayores = () => {
         if (newFechas.length > n) newFechas.length = n;
         setFechasCuotas(newFechas);
 
-        if (modoPago === 'manual') {
-            const newCuotas = [...manualCuotas];
-            while (newCuotas.length < n) newCuotas.push(0);
-            if (newCuotas.length > n) newCuotas.length = n;
-            setManualCuotas(newCuotas);
-        }
+        const newCuotas = [...manualCuotas];
+        while (newCuotas.length < n) newCuotas.push(0);
+        if (newCuotas.length > n) newCuotas.length = n;
+        setManualCuotas(newCuotas);
     };
 
     const validateAndPrepare = () => {
@@ -128,7 +126,7 @@ const RPMayores = () => {
                                 setTotalObjetivoOption(val);
                                 if (val !== "custom") {
                                     const newTotal = parseInt(val);
-                                    if (modoPago === 'manual' && cuotas === "1") {
+                                    if (cuotas === "1") {
                                         setManualCuotas([newTotal]);
                                     }
                                 }
@@ -145,7 +143,7 @@ const RPMayores = () => {
                                 onChange={(val) => {
                                     const newTotal = parseInt(val) || 0;
                                     setCustomTotal(newTotal);
-                                    if (modoPago === 'manual' && cuotas === "1") {
+                                    if (cuotas === "1") {
                                         setManualCuotas([newTotal]);
                                     }
                                 }}
@@ -193,7 +191,7 @@ const RPMayores = () => {
                                         />
                                     ) : (
                                         <CurrencyField
-                                            value={manualCuotas[i] !== 0 ? manualCuotas[i].toString() : ""}
+                                            value={(manualCuotas[i] || 0) !== 0 ? manualCuotas[i].toString() : ""}
                                             onChange={(val) => {
                                                 const newC = [...manualCuotas];
                                                 newC[i] = parseInt(val) || 0;
