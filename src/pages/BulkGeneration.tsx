@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { parseExcel, CamperData } from "@/utils/excelParser";
 import { ensureFolder, uploadFileToDrive } from "@/utils/googleDriveService";
 import { prepareUnifiedData, generateContract, getContractFileName } from "@/utils/contractGenerator";
+import { parseCurrency } from "@/utils/numberToWords";
 import * as xlsx from "xlsx";
 
 interface ProcessResult {
@@ -129,9 +130,22 @@ export default function BulkGeneration() {
       }
 
       // 4. Validaciones financieras
-      const valorTotalObjetivoNumerico = parseInt(c.valorTotalObjetivo?.replace(/\D/g, '') || "0");
+      const valorTotalObjetivoNumerico = parseCurrency(c.valorTotalObjetivo);
+      const valorFormacionNumerico = parseCurrency(c.valorFormacion);
       const expectedCuotasCount = parseInt(c.cuotas?.trim() || "0");
       
+      if (valorTotalObjetivoNumerico <= 0) {
+        errors.push("Valor Total Objetivo es requerido y debe ser mayor a 0");
+      } else if (valorTotalObjetivoNumerico > 100000000) {
+        errors.push(`Valor Total Objetivo ($${valorTotalObjetivoNumerico.toLocaleString()}) es excesivamente alto. Verifique que no tenga ceros decimales erróneos.`);
+      }
+
+      if (valorFormacionNumerico <= 0) {
+        errors.push("Valor de Formación es requerido y debe ser mayor a 0");
+      } else if (valorFormacionNumerico > 100000000) {
+        errors.push(`Valor de Formación ($${valorFormacionNumerico.toLocaleString()}) es excesivamente alto. Verifique que no tenga ceros decimales erróneos.`);
+      }
+
       if (isNaN(expectedCuotasCount) || expectedCuotasCount <= 0) {
         errors.push("Número de cuotas es requerido y debe ser mayor a 0");
       } else {
@@ -249,7 +263,7 @@ export default function BulkGeneration() {
           let manualCuotas: number[] = [];
           let fechasCuotas: string[] = [];
           
-          let totalObjetivo = parseInt(camper.valorTotalObjetivo?.replace(/\D/g, '') || "0");
+          let totalObjetivo = parseCurrency(camper.valorTotalObjetivo) || 13000000;
           const expectedCuotasCount = parseInt(camper.cuotas || "0");
           
           if (camper.cuotasDetalle && camper.cuotasDetalle.length >= expectedCuotasCount && expectedCuotasCount > 0) {
@@ -272,7 +286,7 @@ export default function BulkGeneration() {
             fechasCuotas,
             isRP: true,
             totalObjetivo,
-            valorFormacion: camper.valorFormacion || "18000000",
+            valorFormacion: parseCurrency(camper.valorFormacion) || 18000000,
             isMinor: !isMayor
           });
 

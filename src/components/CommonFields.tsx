@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react";
+import { parseCurrency } from "@/utils/numberToWords";
 
 interface FieldProps {
     label?: string;
@@ -25,8 +26,14 @@ export const ContractField = ({ label, value, onChange, type = "text", placehold
 
 export const CurrencyField = ({ label, value, onChange, placeholder, className, inputClassName }: FieldProps) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value.replace(/\D/g, ""); // Keep only digits
-        onChange(rawValue);
+        const inputVal = e.target.value;
+        if (inputVal.includes('.') || inputVal.includes(',') || inputVal.includes('$')) {
+            const parsed = parseCurrency(inputVal);
+            onChange(parsed > 0 ? parsed.toString() : inputVal.replace(/\D/g, ""));
+        } else {
+            const rawValue = inputVal.replace(/\D/g, "");
+            onChange(rawValue);
+        }
     };
 
     const formattedValue = value ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "";

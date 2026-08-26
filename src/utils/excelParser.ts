@@ -1,5 +1,6 @@
 
 import * as xlsx from 'xlsx';
+import { parseCurrency } from './numberToWords';
 
 export interface CamperData {
     nombreRepresentante: string;
@@ -126,7 +127,7 @@ export const parseExcel = async (file: File): Promise<CamperData[]> => {
                         const fechaCuota = getValue(row, [`Fecha Cuota ${i}`, `Vencimiento Cuota ${i}`]);
                         
                         if (valorCuotaStr) {
-                            const valorParsed = parseInt(valorCuotaStr.replace(/\D/g, ''));
+                            const valorParsed = parseCurrency(valorCuotaStr);
                             if (!isNaN(valorParsed) && valorParsed > 0) {
                                 cuotasDetalle.push({
                                     valor: valorParsed,

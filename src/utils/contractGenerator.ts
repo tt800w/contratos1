@@ -12,7 +12,7 @@ export interface UnifiedContractData {
     };
 }
 
-import { formatCurrencySpanish, numberToSpanishWords } from './numberToWords';
+import { formatCurrencySpanish, numberToSpanishWords, parseCurrency } from './numberToWords';
 
 const runDocumentQualityPass = (zip: PizZip) => {
     const documentXml = zip.file("word/document.xml")?.asText();
@@ -101,7 +101,8 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
     const ano = fechaObj.getFullYear().toString();
 
     const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
-    const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (extraData.totalObjetivo || 13000000);
+    const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (parseCurrency(extraData.totalObjetivo) || 13000000);
+    const valorFormacionNumerico = parseCurrency(extraData.valorFormacion) || 18000000;
     const valorCuota = Math.floor(TOTAL_OBJETIVO / numCuotasTotal);
 
     let planPagos = "";
@@ -241,8 +242,8 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "VALOR_TOTAL_NUMEROS": extraData.isRP || extraData.isPP ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(TOTAL_OBJETIVO)}` : "",
         "VALOR_TOTAL_LETRAS": extraData.isRP || extraData.isPP ? numberToSpanishWords(TOTAL_OBJETIVO).trim() : "",
         "VALOR_TOTAL_LETRAS_UPPER": extraData.isRP || extraData.isPP ? numberToSpanishWords(TOTAL_OBJETIVO).trim().toUpperCase() : "",
-        "VALOR_FORMACION_NUMEROS": extraData.valorFormacion ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(parseInt(extraData.valorFormacion))}` : "",
-        "VALOR_FORMACION_LETRAS": extraData.valorFormacion ? numberToSpanishWords(parseInt(extraData.valorFormacion)).trim() : "",
+        "VALOR_FORMACION_NUMEROS": valorFormacionNumerico ? `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(valorFormacionNumerico)}` : "",
+        "VALOR_FORMACION_LETRAS": valorFormacionNumerico ? numberToSpanishWords(valorFormacionNumerico).trim() : "",
         "VALOR_CUOTA_NUMEROS": `$ ${new Intl.NumberFormat('es-CO', { style: 'decimal', maximumFractionDigits: 0 }).format(valorCuota)}`,
         "VALOR_CUOTA_LETRAS": numberToSpanishWords(valorCuota).trim(),
         "VALOR_CUOTA_LETRAS_UPPER": numberToSpanishWords(valorCuota).trim().toUpperCase(),
