@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { FileDown, Mail, FileText } from "lucide-react";
-import { generateContract, prepareUnifiedData, downloadAsPDF, getContractFileName, downloadAsNativePDF } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, getContractFileName, downloadAsNativePDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { CamperData } from "@/utils/excelParser";
 import { useCamperData } from "@/hooks/useCamperData";
-import { validateMonths, validateChronology } from "@/utils/validation";
+import { validateMonths, validateChronology, validateFormDates } from "@/utils/validation";
 import ContractLayout from "@/components/ContractLayout";
 import { ContractField, FileNameField, CurrencyField } from "@/components/CommonFields";
 
@@ -55,6 +55,11 @@ const RPMenores = () => {
         }
         if (modoPago === 'manual' && sumaManual !== totalObjetivo) {
             toast.error(`La suma total de las cuotas debe ser $ ${totalObjetivo.toLocaleString()}`);
+            return null;
+        }
+        const dateFormatError = validateFormDates(fechaContrato, fechasCuotas);
+        if (dateFormatError) {
+            toast.error(dateFormatError);
             return null;
         }
         if (!validateMonths(fechasCuotas) || !validateChronology(fechasCuotas)) {

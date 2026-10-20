@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { FileDown, Mail, FileText } from "lucide-react";
-import { generateContract, prepareUnifiedData, downloadAsPDF, getContractFileName, downloadAsNativePDF } from "@/utils/contractGenerator";
+import { generateContract, prepareUnifiedData, getContractFileName, downloadAsNativePDF } from "@/utils/contractGenerator";
 import { uploadToZapSign } from "@/utils/zapSignService";
 import { toast } from "sonner";
 import { CamperData } from "@/utils/excelParser";
 import { useCamperData } from "@/hooks/useCamperData";
 import ContractLayout from "@/components/ContractLayout";
 import { ContractField, FileNameField } from "@/components/CommonFields";
+import { validateFormDates } from "@/utils/validation";
 
 const LumniMenores = () => {
   const { users, selectedUser, setSelectedUser, selectedUserData, handleFileUpload } = useCamperData();
@@ -20,6 +21,11 @@ const LumniMenores = () => {
   const validateAndPrepare = () => {
     if (!selectedUser || !selectedUserData) {
       toast.error("Por favor seleccione un camper");
+      return null;
+    }
+    const dateFormatError = validateFormDates(fechaContrato);
+    if (dateFormatError) {
+      toast.error(dateFormatError);
       return null;
     }
     return prepareUnifiedData(selectedUserData.raw as CamperData, { pagare, fechaContrato });

@@ -99,7 +99,7 @@ const DocxViewer = ({ url, blob, title = "VISTA PREVIA DEL DOCUMENTO" }: DocxVie
                     section.appendChild(footerContainer);
                 });
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error displaying document:", error);
                 if (containerRef.current) {
                     containerRef.current.innerHTML = `<div class="p-8 text-red-500 text-center">Error al cargar el documento: ${error.message || error}</div>`;
