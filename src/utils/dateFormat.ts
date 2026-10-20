@@ -1,20 +1,18 @@
 /**
- * Formato de fecha oficial y ÚNICO del sistema: AAAA-MM-DD (ISO 8601, ej. 2026-10-16).
+ * Formato de fecha oficial del sistema: DD/MM/AAAA (ej. 16/10/2026).
  *
- * Es el mismo formato que producen los <input type="date"> de los formularios individuales
- * y el que usa la plantilla de carga masiva. No es ambiguo (no se confunde DD/MM con MM/DD).
+ * También se acepta el formato ISO AAAA-MM-DD (2026-10-16) producido por los
+ * inputs type="date" de los formularios individuales.
  *
- * POLÍTICA: no se adivinan ni se convierten formatos alternativos. Cualquier valor que no
- * cumpla exactamente este formato (o que no sea una fecha de calendario válida) se rechaza.
- *
- * Todas las operaciones trabajan con los componentes numéricos (año/mes/día) y NO con objetos
- * Date, para evitar desfases por zona horaria y la conversión de años de 2 dígitos a 19XX.
+ * No se aceptan años de dos dígitos (ej. 10/16/26) ni formatos estadounidenses (MM/DD/AAAA).
+ * Cualquier formato ambiguo o inválido se rechaza estrictamente.
  */
 
-export const OFFICIAL_DATE_FORMAT = "AAAA-MM-DD";
-export const OFFICIAL_DATE_EXAMPLE = "2026-10-16";
+export const OFFICIAL_DATE_FORMAT = "DD/MM/AAAA";
+export const OFFICIAL_DATE_EXAMPLE = "16/10/2026";
 
-const OFFICIAL_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DDMMAAAA_REGEX = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+const AAAAMMDD_REGEX = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
 
 export interface DateParts {
     year: number;
@@ -28,18 +26,31 @@ const daysInMonth = (year: number, month: number) =>
     [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
 
 /**
- * Interpreta una fecha en el formato oficial AAAA-MM-DD.
- * Devuelve null si el texto no cumple exactamente el formato o si la fecha no existe
- * en el calendario (ej. 2026-02-30). No recorta ni corrige el valor.
+ * Interpreta una fecha en el formato oficial DD/MM/AAAA o ISO AAAA-MM-DD.
+ * Devuelve null si no cumple el formato, si el año no tiene 4 dígitos,
+ * o si la fecha es inexistente en el calendario (ej. 30/02/2026).
  */
 export const parseOfficialDate = (value: string | null | undefined): DateParts | null => {
     if (typeof value !== "string") return null;
-    const match = OFFICIAL_DATE_REGEX.exec(value);
-    if (!match) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
 
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
+    let year: number;
+    let month: number;
+    let day: number;
+
+    const matchDD = DDMMAAAA_REGEX.exec(trimmed);
+    if (matchDD) {
+        day = Number(matchDD[1]);
+        month = Number(matchDD[2]);
+        year = Number(matchDD[3]);
+    } else {
+        const matchISO = AAAAMMDD_REGEX.exec(trimmed);
+        if (!matchISO) return null;
+        year = Number(matchISO[1]);
+        month = Number(matchISO[2]);
+        day = Number(matchISO[3]);
+    }
 
     if (year < 1900 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
     return { year, month, day };

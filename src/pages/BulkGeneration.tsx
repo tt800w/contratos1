@@ -95,17 +95,30 @@ export default function BulkGeneration() {
       [
         "CC", "Juan Perez", "100123456", "Calle 1 # 2-3", "juan@test.com", "3001234567",
         "", "", "", "",
-        "123", "diurna", "2026-08-10", "18000000", "2", "13000000",
-        "6500000", "2026-09-01", "6500000", "2026-10-01", "", ""
+        "123", "diurna", "10/08/2026", "18000000", "2", "13000000",
+        "6500000", "01/09/2026", "6500000", "01/10/2026", "", ""
       ],
       [
         "TI", "Ana Gomez", "100987654", "Carrera 4 # 5-6", "ana@test.com", "3101234567",
         "Maria Gomez", "50123456", "maria@test.com", "3151234567",
-        "124", "nocturna", "2026-08-11", "18000000", "3", "12000000",
-        "4000000", "2026-09-15", "4000000", "2026-10-15", "4000000", "2026-11-15"
+        "124", "nocturna", "11/08/2026", "18000000", "3", "12000000",
+        "4000000", "15/09/2026", "4000000", "15/10/2026", "4000000", "15/11/2026"
       ]
     ];
     const ws = xlsx.utils.aoa_to_sheet(wsData);
+
+    // Formatear las columnas de fecha explícitamente como Texto (@) para preservar DD/MM/AAAA sin alteración
+    const dateColIndexes = [12, 17, 19, 21]; // Fecha Contrato, Fecha Cuota 1, 2, 3
+    dateColIndexes.forEach((c) => {
+      for (let r = 1; r < wsData.length; r++) {
+        const cellRef = xlsx.utils.encode_cell({ r, c });
+        if (ws[cellRef]) {
+          ws[cellRef].t = 's';
+          ws[cellRef].z = '@';
+        }
+      }
+    });
+
     const wb = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(wb, ws, "Plantilla Masiva");
     xlsx.writeFile(wb, "Plantilla_Contratos_Masivos.xlsx");
@@ -425,7 +438,7 @@ export default function BulkGeneration() {
               <p className="font-semibold text-foreground mb-1">Formato de fecha obligatorio: {OFFICIAL_DATE_FORMAT}</p>
               Ej: <span className="font-mono text-foreground">{OFFICIAL_DATE_EXAMPLE}</span>. Aplica a "Fecha Contrato" y a cada "Fecha Cuota N".
               Configure esas columnas como <strong>Texto</strong> en Excel para que no cambie el formato.
-              Las filas con fechas en otro formato (ej. 16/10/2026 o 10/16/2026) serán bloqueadas.
+              Las filas con fechas en formato de 2 dígitos (ej. 10/16/26) o formato estadounidense (MM/DD/AAAA) serán bloqueadas.
             </div>
 
             <button
