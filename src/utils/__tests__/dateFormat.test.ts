@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseOfficialDate, isOfficialDate, tryAutoFixDate } from "../dateFormat";
+import { isOfficialDate, tryAutoFixDate } from "../dateFormat";
 
 describe("dateFormat utilities", () => {
   it("strictly validates DD/MM/AAAA and ISO AAAA-MM-DD", () => {

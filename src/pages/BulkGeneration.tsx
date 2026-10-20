@@ -8,6 +8,7 @@ import { ensureFolder, uploadFileToDrive } from "@/utils/googleDriveService";
 import { prepareUnifiedData, generateContract, getContractFileName } from "@/utils/contractGenerator";
 import { parseCurrency } from "@/utils/numberToWords";
 import { isOfficialDate, getDateFormatErrorMessage, OFFICIAL_DATE_FORMAT, OFFICIAL_DATE_EXAMPLE, tryAutoFixDate } from "@/utils/dateFormat";
+import { validateColombianPhone, cleanColombianPhone } from "@/utils/phoneValidation";
 import * as xlsx from "xlsx";
 
 interface DateFieldError {
@@ -265,9 +266,9 @@ export default function BulkGeneration() {
     ];
     const ws = xlsx.utils.aoa_to_sheet(wsData);
 
-    // Formatear las columnas de fecha explícitamente como Texto (@) para preservar DD/MM/AAAA sin alteración
-    const dateColIndexes = [12, 17, 19, 21]; // Fecha Contrato, Fecha Cuota 1, 2, 3
-    dateColIndexes.forEach((c) => {
+    // Formatear columnas de fecha, celular y documento explícitamente como Texto (@) para preservar formato sin alteración
+    const textColIndexes = [2, 5, 7, 9, 10, 12, 17, 19, 21]; // Documento, Celular, Doc Acudiente, Cel Acudiente, Pagaré, Fecha Contrato, Cuotas...
+    textColIndexes.forEach((c) => {
       for (let r = 1; r < wsData.length; r++) {
         const cellRef = xlsx.utils.encode_cell({ r, c });
         if (ws[cellRef]) {
@@ -295,21 +296,33 @@ export default function BulkGeneration() {
       const tipo = (c.tipoDocumentoCamper || "TI").toUpperCase();
 
       // 1. Obligatorios
-      if (!c.nombreCamper) errors.push("Nombre del Camper");
-      if (!c.documentoCamper) errors.push("Documento del Camper");
-      if (!c.pagare) errors.push("Número de Pagaré");
-      if (!c.valorFormacion) errors.push("Valor de Formación");
-      if (!c.valorTotalObjetivo) errors.push("Valor Total Objetivo");
-      if (!c.fechaContrato) errors.push("Fecha del Contrato");
+      if (!c.nombreCamper) errors.push("Nombre del Camper es requerido");
+      if (!c.documentoCamper) errors.push("Documento del Camper es requerido");
+      if (!c.pagare) errors.push("Número de Pagaré es requerido");
+      if (!c.valorFormacion) errors.push("Valor de Formación es requerido");
+      if (!c.valorTotalObjetivo) errors.push("Valor Total Objetivo es requerido");
+      if (!c.fechaContrato) errors.push("Fecha del Contrato es requerida");
       else if (!isOfficialDate(c.fechaContrato)) {
         // Formato estricto: no se adivina ni se convierte (ej. 10/16/2026 o 16/10/2026 se rechazan)
         dateErrors.push(buildDateFieldError("Fecha Contrato", c.fechaContrato, c.fechaContratoEsCeldaFecha));
+      }
+
+      // Validación estricta del número de celular del camper (10 dígitos colombianos iniciando en 3)
+      const celCamperValidation = validateColombianPhone(c.celularCamper);
+      if (!celCamperValidation.isValid) {
+        errors.push(`Celular del Camper: ${celCamperValidation.errorMessage}`);
       }
 
       // 2. Acudiente obligatorio para TI
       if (tipo === "TI") {
         if (!c.nombreRepresentante) errors.push("Nombre del Acudiente (Requerido por ser TI)");
         if (!c.cedulaRepresentante) errors.push("Documento del Acudiente (Requerido por ser TI)");
+        if (c.telefonoRepresentante) {
+          const celAcudienteVal = validateColombianPhone(c.telefonoRepresentante);
+          if (!celAcudienteVal.isValid) {
+            errors.push(`Celular del Acudiente: ${celAcudienteVal.errorMessage}`);
+          }
+        }
       }
 
       // 3. Pagarés duplicados en el mismo excel
@@ -350,20 +363,28 @@ export default function BulkGeneration() {
           let sumaCuotas = 0;
 
           relevantCuotas.forEach((cuota, idx) => {
+            const cuotaNum = idx + 1;
             if (!cuota.valor || cuota.valor <= 0) {
-              errors.push(`Valor de la cuota ${idx + 1} faltante o inválido`);
+              errors.push(`Cuota ${cuotaNum}: El valor es requerido y debe ser mayor a $0`);
+            } else if (valorTotalObjetivoNumerico > 0 && cuota.valor > valorTotalObjetivoNumerico) {
+              errors.push(`Cuota ${cuotaNum}: El valor ($${cuota.valor.toLocaleString()}) es excesivo y supera el Valor Total Objetivo ($${valorTotalObjetivoNumerico.toLocaleString()})`);
             } else {
               sumaCuotas += cuota.valor;
             }
+
             if (!cuota.fecha || cuota.fecha.trim() === "") {
-              errors.push(`Fecha de la cuota ${idx + 1} es requerida`);
+              errors.push(`Cuota ${cuotaNum}: Fecha de pago es requerida`);
             } else if (!isOfficialDate(cuota.fecha)) {
-              dateErrors.push(buildDateFieldError(`Fecha Cuota ${idx + 1}`, cuota.fecha, cuota.fechaEsCeldaFecha));
+              dateErrors.push(buildDateFieldError(`Fecha Cuota ${cuotaNum}`, cuota.fecha, cuota.fechaEsCeldaFecha));
             }
           });
 
           if (valorTotalObjetivoNumerico > 0 && sumaCuotas !== valorTotalObjetivoNumerico) {
-            errors.push(`La suma de las ${expectedCuotasCount} cuotas ($${sumaCuotas.toLocaleString()}) no coincide con el Valor Total Objetivo ($${valorTotalObjetivoNumerico.toLocaleString()})`);
+            const diferencia = sumaCuotas - valorTotalObjetivoNumerico;
+            const diffTexto = diferencia > 0
+              ? `la suma de cuotas excede el objetivo por +$${diferencia.toLocaleString()}`
+              : `a la suma de cuotas le faltan -$${Math.abs(diferencia).toLocaleString()}`;
+            errors.push(`La suma de las ${expectedCuotasCount} cuotas ($${sumaCuotas.toLocaleString()}) no coincide con el Valor Total Objetivo ($${valorTotalObjetivoNumerico.toLocaleString()}) — ${diffTexto}.`);
           }
         }
       }
@@ -950,7 +971,7 @@ export default function BulkGeneration() {
                             type="text"
                             value={camper.documentoCamper || ""}
                             onChange={e => updateDraftField(recordIdx, 'documentoCamper', e.target.value)}
-                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none font-mono"
                           />
                         </div>
 
@@ -965,7 +986,81 @@ export default function BulkGeneration() {
                         </div>
                       </div>
 
-                      {/* Segunda fila: Fecha Contrato y Valores */}
+                      {/* Segunda fila: Contacto (Celular 10 dígitos, Correo, Dirección, Jornada) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs pt-1">
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">
+                            Celular Camper <span className="text-primary font-mono">(10 dígitos)</span>
+                          </label>
+                          {(() => {
+                            const celRes = validateColombianPhone(camper.celularCamper);
+                            const cleanLen = cleanColombianPhone(camper.celularCamper).length;
+                            return (
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    placeholder="3001234567"
+                                    value={camper.celularCamper || ""}
+                                    onChange={e => updateDraftField(recordIdx, 'celularCamper', e.target.value)}
+                                    className={`w-full p-2 pr-24 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
+                                      celRes.isValid ? "border-green-500/50" : "border-red-500/60"
+                                    }`}
+                                  />
+                                  <span className="absolute right-2 top-2 text-[10px] font-bold">
+                                    {celRes.isValid ? (
+                                      <span className="text-green-500">✓ 10 DÍGITOS</span>
+                                    ) : (
+                                      <span className="text-red-400">✕ {cleanLen}/10 DÍG</span>
+                                    )}
+                                  </span>
+                                </div>
+                                {!celRes.isValid && (
+                                  <p className="text-[10px] text-red-400 mt-1 leading-tight font-medium">
+                                    {celRes.errorMessage}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Correo Electrónico</label>
+                          <input
+                            type="email"
+                            placeholder="ejemplo@correo.com"
+                            value={camper.emailCamper || ""}
+                            onChange={e => updateDraftField(recordIdx, 'emailCamper', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Dirección de Residencia</label>
+                          <input
+                            type="text"
+                            placeholder="Calle / Carrera #..."
+                            value={camper.direccionCamper || ""}
+                            onChange={e => updateDraftField(recordIdx, 'direccionCamper', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Jornada</label>
+                          <select
+                            value={camper.jornada || "diurna"}
+                            onChange={e => updateDraftField(recordIdx, 'jornada', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          >
+                            <option value="diurna">Diurna</option>
+                            <option value="nocturna">Nocturna</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Tercera fila: Fecha Contrato y Valores */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
                         <div>
                           <label className="font-semibold text-muted-foreground block mb-1">
@@ -1026,7 +1121,7 @@ export default function BulkGeneration() {
 
                       {/* Si es TI, campos de acudiente */}
                       {(camper.tipoDocumentoCamper || "TI").toUpperCase() === "TI" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs p-3 rounded-lg bg-secondary/30 border border-border">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs p-3 rounded-lg bg-secondary/30 border border-border">
                           <div>
                             <label className="font-semibold text-muted-foreground block mb-1">Nombre Acudiente (Requerido para TI)</label>
                             <input
@@ -1042,6 +1137,47 @@ export default function BulkGeneration() {
                               type="text"
                               value={camper.cedulaRepresentante || ""}
                               onChange={e => updateDraftField(recordIdx, 'cedulaRepresentante', e.target.value)}
+                              className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-muted-foreground block mb-1">Celular Acudiente (10 dígitos)</label>
+                            {(() => {
+                              const telRepRes = validateColombianPhone(camper.telefonoRepresentante);
+                              const cleanLen = cleanColombianPhone(camper.telefonoRepresentante).length;
+                              return (
+                                <div>
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      placeholder="3001234567"
+                                      value={camper.telefonoRepresentante || ""}
+                                      onChange={e => updateDraftField(recordIdx, 'telefonoRepresentante', e.target.value)}
+                                      className={`w-full p-2 pr-20 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
+                                        !camper.telefonoRepresentante || telRepRes.isValid ? "border-input" : "border-red-500/60"
+                                      }`}
+                                    />
+                                    {camper.telefonoRepresentante && (
+                                      <span className="absolute right-2 top-2 text-[10px] font-bold">
+                                        {telRepRes.isValid ? (
+                                          <span className="text-green-500">✓ VÁLIDO</span>
+                                        ) : (
+                                          <span className="text-red-400">✕ {cleanLen}/10 DÍG</span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <label className="font-semibold text-muted-foreground block mb-1">Correo Acudiente</label>
+                            <input
+                              type="email"
+                              placeholder="acudiente@correo.com"
+                              value={camper.emailRepresentante || ""}
+                              onChange={e => updateDraftField(recordIdx, 'emailRepresentante', e.target.value)}
                               className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
                             />
                           </div>
@@ -1049,38 +1185,80 @@ export default function BulkGeneration() {
                       )}
 
                       {/* Cuotas Detalladas */}
-                      <div className="space-y-2 pt-2 border-t border-border">
+                      <div className="space-y-3 pt-2 border-t border-border">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-primary" />
                             Fechas y Valores de Cuotas ({camper.cuotasDetalle?.length || 0})
                           </span>
-                          <span className={`text-[11px] px-2.5 py-0.5 rounded-full border font-semibold ${
-                            cuotasCoinciden
-                              ? "bg-green-500/10 text-green-400 border-green-500/30"
-                              : "bg-amber-500/10 text-amber-300 border-amber-500/30"
-                          }`}>
-                            Suma Cuotas: ${sumCuotas.toLocaleString()} / Objetivo: ${targetVal.toLocaleString()} {cuotasCoinciden ? "✓" : "≠"}
-                          </span>
+                          {(() => {
+                            const diff = sumCuotas - targetVal;
+                            return (
+                              <span className={`text-[11px] px-3 py-1 rounded-full border font-bold flex items-center gap-1.5 ${
+                                cuotasCoinciden
+                                  ? "bg-green-500/10 text-green-400 border-green-500/30"
+                                  : "bg-red-500/10 text-red-400 border-red-500/30 shadow-sm"
+                              }`}>
+                                <span>Suma Cuotas: ${sumCuotas.toLocaleString()} / Objetivo: ${targetVal.toLocaleString()}</span>
+                                {cuotasCoinciden ? (
+                                  <span className="text-green-400 font-bold">✓ Coincide</span>
+                                ) : (
+                                  <span className="text-red-400 font-extrabold">
+                                    ({diff > 0 ? `Excede por +$${diff.toLocaleString()}` : `Faltan -$${Math.abs(diff).toLocaleString()}`}) ✕
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           {(camper.cuotasDetalle || []).map((cuota, cIdx) => {
                             const isCDateValid = isOfficialDate(cuota.fecha);
+                            const isValMissing = !cuota.valor || cuota.valor <= 0;
+                            const isValExcessive = targetVal > 0 && cuota.valor > targetVal;
+                            const hasCuotaError = !isCDateValid || isValMissing || isValExcessive;
+
                             return (
                               <div
                                 key={cIdx}
-                                className={`p-2.5 rounded-lg border text-xs space-y-1.5 transition-all ${
-                                  isCDateValid ? "bg-secondary/20 border-border" : "bg-red-500/5 border-red-500/30"
+                                className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
+                                  hasCuotaError
+                                    ? "bg-red-500/10 border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.15)]"
+                                    : "bg-secondary/20 border-border"
                                 }`}
                               >
                                 <div className="flex justify-between items-center font-bold">
-                                  <span>Cuota {cIdx + 1}</span>
-                                  {isCDateValid ? (
-                                    <span className="text-green-500 text-[10px] font-semibold">✓ Válida</span>
-                                  ) : (
-                                    <span className="text-red-400 text-[10px] font-semibold">✕ Formato</span>
-                                  )}
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="text-foreground">Cuota {cIdx + 1}</span>
+                                    {hasCuotaError && (
+                                      <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase">
+                                        Error
+                                      </span>
+                                    )}
+                                  </span>
+
+                                  <div className="flex items-center gap-1">
+                                    {isValExcessive && (
+                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
+                                        ✕ Supera objetivo
+                                      </span>
+                                    )}
+                                    {isValMissing && (
+                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
+                                        ✕ Sin valor
+                                      </span>
+                                    )}
+                                    {!isCDateValid ? (
+                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
+                                        ✕ Formato fecha
+                                      </span>
+                                    ) : (
+                                      !isValExcessive && !isValMissing && (
+                                        <span className="text-green-500 text-[10px] font-semibold">✓ Correcta</span>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
 
                                 <div>
@@ -1109,13 +1287,37 @@ export default function BulkGeneration() {
                                 </div>
 
                                 <div>
-                                  <label className="text-[10px] text-muted-foreground block mb-0.5">Valor ($)</label>
-                                  <input
-                                    type="number"
-                                    value={cuota.valor || ""}
-                                    onChange={e => updateDraftCuota(recordIdx, cIdx, 'valor', e.target.value)}
-                                    className="w-full p-1.5 text-xs rounded border border-input bg-background font-mono"
-                                  />
+                                  <div className="flex justify-between items-center mb-0.5">
+                                    <label className="text-[10px] text-muted-foreground font-semibold">Valor ($)</label>
+                                    {isValExcessive && (
+                                      <span className="text-[10px] text-red-400 font-bold animate-pulse">
+                                        ¡Supera el total!
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="relative">
+                                    <span className="absolute left-2 top-1.5 text-muted-foreground text-xs">$</span>
+                                    <input
+                                      type="number"
+                                      value={cuota.valor || ""}
+                                      onChange={e => updateDraftCuota(recordIdx, cIdx, 'valor', e.target.value)}
+                                      className={`w-full p-1.5 pl-5 text-xs rounded border bg-background font-mono font-semibold ${
+                                        isValExcessive || isValMissing
+                                          ? "border-red-500 text-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                          : "border-input text-foreground"
+                                      }`}
+                                    />
+                                  </div>
+                                  {isValExcessive && (
+                                    <p className="text-[10px] text-red-400 font-medium mt-1 leading-tight">
+                                      ⚠️ Este valor ($<strong>{(cuota.valor || 0).toLocaleString()}</strong>) supera el objetivo ($<strong>{targetVal.toLocaleString()}</strong>).
+                                    </p>
+                                  )}
+                                  {isValMissing && (
+                                    <p className="text-[10px] text-red-400 font-medium mt-1 leading-tight">
+                                      ⚠️ Ingrese un valor mayor a $0.
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             );
