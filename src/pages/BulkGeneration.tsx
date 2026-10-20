@@ -7,27 +7,43 @@ import { parseExcel, CamperData } from "@/utils/excelParser";
 import { ensureFolder, uploadFileToDrive } from "@/utils/googleDriveService";
 import { prepareUnifiedData, generateContract, getContractFileName } from "@/utils/contractGenerator";
 import { parseCurrency } from "@/utils/numberToWords";
+import { isOfficialDate, getDateFormatErrorMessage, OFFICIAL_DATE_FORMAT, OFFICIAL_DATE_EXAMPLE } from "@/utils/dateFormat";
 import * as xlsx from "xlsx";
+
+interface DateFieldError {
+  campo: string;        // Ej: "Fecha Contrato", "Fecha Cuota 2"
+  valor: string;        // Valor tal cual se encontró en el Excel
+  mensaje: string;      // Mensaje explicativo para el usuario
+}
 
 interface ProcessResult {
   camper: CamperData;
   status: 'pending' | 'success' | 'error';
   message: string;
   errors?: string[];
+  dateErrors?: DateFieldError[];
 }
+
+const DATE_CELL_HINT = ` La celda está guardada como fecha de Excel con un formato distinto: cambie el formato de la columna a "Texto" y escriba la fecha como ${OFFICIAL_DATE_FORMAT}.`;
+
+const buildDateFieldError = (campo: string, valor: string, esCeldaFecha?: boolean): DateFieldError => ({
+  campo,
+  valor,
+  mensaje: getDateFormatErrorMessage(valor) + (esCeldaFecha ? DATE_CELL_HINT : ""),
+});
 
 export default function BulkGeneration() {
   const navigate = useNavigate();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [folderName, setFolderName] = useState("Contratos Masivos");
   const [file, setFile] = useState<File | null>(null);
-  const [data, setData] = useState<CamperData[]>([]);
-  
+  const [_data, setData] = useState<CamperData[]>([]);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ProcessResult[]>([]);
-  const [logs, setLogs] = useState<{ type: 'success' | 'error' | 'info'; message: string }[]>([]);
+  const [_logs, setLogs] = useState<{ type: 'success' | 'error' | 'info'; message: string }[]>([]);
   const [activePopover, setActivePopover] = useState<number | null>(null);
 
   const resetProcess = () => {
@@ -58,7 +74,7 @@ export default function BulkGeneration() {
     setLogs((prev) => [...prev, { type, message }]);
   };
 
-  const updateResultStatus = (index: number, status: 'success'|'error', message: string, errors?: string[]) => {
+  const updateResultStatus = (index: number, status: 'success' | 'error', message: string, errors?: string[]) => {
     setResults(prev => {
       const newArr = [...prev];
       if (newArr[index]) {
@@ -103,9 +119,10 @@ export default function BulkGeneration() {
     for (let i = 0; i < parsedData.length; i++) {
       const c = parsedData[i];
       const errors: string[] = [];
-      
+      const dateErrors: DateFieldError[] = [];
+
       const tipo = (c.tipoDocumentoCamper || "TI").toUpperCase();
-      
+
       // 1. Obligatorios
       if (!c.nombreCamper) errors.push("Nombre del Camper");
       if (!c.documentoCamper) errors.push("Documento del Camper");
@@ -113,6 +130,10 @@ export default function BulkGeneration() {
       if (!c.valorFormacion) errors.push("Valor de Formación");
       if (!c.valorTotalObjetivo) errors.push("Valor Total Objetivo");
       if (!c.fechaContrato) errors.push("Fecha del Contrato");
+      else if (!isOfficialDate(c.fechaContrato)) {
+        // Formato estricto: no se adivina ni se convierte (ej. 10/16/2026 o 16/10/2026 se rechazan)
+        dateErrors.push(buildDateFieldError("Fecha Contrato", c.fechaContrato, c.fechaContratoEsCeldaFecha));
+      }
 
       // 2. Acudiente obligatorio para TI
       if (tipo === "TI") {
@@ -133,7 +154,7 @@ export default function BulkGeneration() {
       const valorTotalObjetivoNumerico = parseCurrency(c.valorTotalObjetivo);
       const valorFormacionNumerico = parseCurrency(c.valorFormacion);
       const expectedCuotasCount = parseInt(c.cuotas?.trim() || "0");
-      
+
       if (valorTotalObjetivoNumerico <= 0) {
         errors.push("Valor Total Objetivo es requerido y debe ser mayor a 0");
       } else if (valorTotalObjetivoNumerico > 100000000) {
@@ -156,7 +177,7 @@ export default function BulkGeneration() {
           // Priorizamos la cantidad de cuotas que dicta la columna "Cuotas"
           const relevantCuotas = actualCuotas.slice(0, expectedCuotasCount);
           let sumaCuotas = 0;
-          
+
           relevantCuotas.forEach((cuota, idx) => {
             if (!cuota.valor || cuota.valor <= 0) {
               errors.push(`Valor de la cuota ${idx + 1} faltante o inválido`);
@@ -165,6 +186,8 @@ export default function BulkGeneration() {
             }
             if (!cuota.fecha || cuota.fecha.trim() === "") {
               errors.push(`Fecha de la cuota ${idx + 1} es requerida`);
+            } else if (!isOfficialDate(cuota.fecha)) {
+              dateErrors.push(buildDateFieldError(`Fecha Cuota ${idx + 1}`, cuota.fecha, cuota.fechaEsCeldaFecha));
             }
           });
 
@@ -174,11 +197,15 @@ export default function BulkGeneration() {
         }
       }
 
+      // Los errores de fecha también se listan en el detalle del registro, con el campo afectado.
+      dateErrors.forEach(de => errors.push(`${de.campo}: ${de.mensaje}`));
+
       initialResults.push({
         camper: c,
         status: errors.length > 0 ? 'error' : 'pending',
         message: errors.length > 0 ? 'Datos faltantes o inválidos' : 'Listo para generar',
-        errors
+        errors,
+        dateErrors
       });
     }
 
@@ -192,15 +219,19 @@ export default function BulkGeneration() {
     setIsFinished(false);
     setProgress(0);
     setLogs([]);
-    
+
     try {
       const parsedData = await parseExcel(selectedFile);
       const validationResults = validateData(parsedData);
-      
+
       setData(parsedData);
       setResults(validationResults);
-      
+
       const errores = validationResults.filter(r => r.status === 'error').length;
+      const filasConFechaInvalida = validationResults.filter(r => (r.dateErrors?.length ?? 0) > 0).length;
+      if (filasConFechaInvalida > 0) {
+        toast.error(`${filasConFechaInvalida} registro(s) tienen fechas fuera del formato obligatorio ${OFFICIAL_DATE_FORMAT}. No se generarán.`);
+      }
       if (errores > 0) {
         toast.warning(`Se encontraron ${errores} registros con errores de validación.`);
         addLog('error', `${errores} registros tienen errores y no serán procesados.`);
@@ -219,7 +250,7 @@ export default function BulkGeneration() {
       toast.error("Debes iniciar sesión con Google primero");
       return;
     }
-    
+
     const validRecords = results.filter(r => r.status === 'pending');
     if (validRecords.length === 0) {
       toast.error("No hay registros válidos para procesar.");
@@ -236,7 +267,7 @@ export default function BulkGeneration() {
     try {
       addLog('info', 'Buscando o creando carpeta principal "contratos"...');
       const rootFolder = await ensureFolder(accessToken, "contratos");
-      
+
       addLog('info', `Buscando o creando subcarpeta "${folderName}"...`);
       const targetFolder = await ensureFolder(accessToken, folderName, rootFolder.id);
 
@@ -247,14 +278,14 @@ export default function BulkGeneration() {
         try {
           const isMayor = (camper.tipoDocumentoCamper || "TI").toUpperCase() === 'CC';
           const jornada = (camper.jornada || 'diurna').toLowerCase();
-          
+
           let templateUrl = "";
           if (isMayor) {
-            templateUrl = jornada === 'diurna' 
+            templateUrl = jornada === 'diurna'
               ? "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad.docx"
               : "/contratos/Condiciones Específicas-Recursos Propios Mayor de Edad Nocturna.docx";
           } else {
-            templateUrl = jornada === 'diurna' 
+            templateUrl = jornada === 'diurna'
               ? "/contratos/Condiciones Específicas-Recursos Propios Menor de Edad.docx"
               : "/contratos/Condiciones Específicas-Recursos Propios Menor de Edad Nocturna.docx";
           }
@@ -262,10 +293,10 @@ export default function BulkGeneration() {
           // Armar finanzas
           let manualCuotas: number[] = [];
           let fechasCuotas: string[] = [];
-          
+
           let totalObjetivo = parseCurrency(camper.valorTotalObjetivo) || 13000000;
           const expectedCuotasCount = parseInt(camper.cuotas || "0");
-          
+
           if (camper.cuotasDetalle && camper.cuotasDetalle.length >= expectedCuotasCount && expectedCuotasCount > 0) {
             const relevantCuotas = camper.cuotasDetalle.slice(0, expectedCuotasCount);
             manualCuotas = relevantCuotas.map(c => c.valor);
@@ -292,7 +323,7 @@ export default function BulkGeneration() {
 
           addLog('info', `Generando contrato para ${camper.nombreCamper}...`);
           const blob = await generateContract(templateUrl, unifiedData, "temp.docx", true);
-          
+
           const fileName = getContractFileName(camper.pagare || "", "Recursos Propios", camper.nombreCamper, "docx");
 
           await uploadFileToDrive(accessToken, blob as Blob, fileName, targetFolder.id);
@@ -304,11 +335,11 @@ export default function BulkGeneration() {
           updateResultStatus(i, 'error', error.message, [error.message]);
           addLog('error', `Falló contrato de ${camper.nombreCamper}: ${error.message}`);
         }
-        
+
         processedCount++;
         setProgress(Math.round((processedCount / validRecords.length) * 100));
       }
-      
+
       setIsFinished(true);
       toast.success("Proceso masivo finalizado");
       addLog('success', '¡Generación masiva completada!');
@@ -324,21 +355,25 @@ export default function BulkGeneration() {
   const exitosos = results.filter(r => r.status === 'success').length;
   const conErrores = results.filter(r => r.status === 'error').length;
   const pendientes = results.filter(r => r.status === 'pending').length;
+  const filasConErrorDeFecha = results
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => (r.dateErrors?.length ?? 0) > 0);
+  const totalErroresDeFecha = filasConErrorDeFecha.reduce((acc, { r }) => acc + (r.dateErrors?.length ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6 font-sans">
       <div className="w-full max-w-[95%] mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate("/")} 
+            <button
+              onClick={() => navigate("/")}
               className="p-2 hover:bg-secondary rounded-full transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground"
               title="Volver al inicio"
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="text-primary"/> Generación Masiva</h1>
+              <h1 className="text-2xl font-bold flex items-center gap-2"><FileSpreadsheet className="text-primary" /> Generación Masiva</h1>
               <p className="text-muted-foreground text-sm">Validación estricta y carga automática a Google Drive.</p>
             </div>
           </div>
@@ -351,7 +386,7 @@ export default function BulkGeneration() {
           {/* Panel Izquierdo: Configuración */}
           <div className="lg:col-span-1 space-y-4 p-5 border border-border rounded-xl bg-card h-fit">
             <h2 className="text-lg font-semibold flex items-center gap-2"><Folder className="w-5 h-5 text-primary" /> Configuración</h2>
-            
+
             {!accessToken ? (
               <button onClick={() => login()} className="w-full primary-button py-3 text-sm flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                 Vincular con Google Drive
@@ -364,8 +399,8 @@ export default function BulkGeneration() {
 
             <div>
               <label className="section-label mb-2 block">Carpeta de Destino</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 disabled={isProcessing}
@@ -386,21 +421,28 @@ export default function BulkGeneration() {
               </label>
             </div>
 
-            <button 
+            <div className="p-3 rounded-md border border-primary/20 bg-primary/5 text-xs text-muted-foreground leading-relaxed">
+              <p className="font-semibold text-foreground mb-1">Formato de fecha obligatorio: {OFFICIAL_DATE_FORMAT}</p>
+              Ej: <span className="font-mono text-foreground">{OFFICIAL_DATE_EXAMPLE}</span>. Aplica a "Fecha Contrato" y a cada "Fecha Cuota N".
+              Configure esas columnas como <strong>Texto</strong> en Excel para que no cambie el formato.
+              Las filas con fechas en otro formato (ej. 16/10/2026 o 10/16/2026) serán bloqueadas.
+            </div>
+
+            <button
               onClick={handleGenerate}
               disabled={isProcessing || isFinished || !accessToken || pendientes === 0}
               className="w-full primary-button py-3 mt-4 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Play className="w-4 h-4" /> 
+              <Play className="w-4 h-4" />
               {isProcessing ? "PROCESANDO..." : isFinished ? "PROCESO FINALIZADO" : "GENERAR CONTRATOS"}
             </button>
 
             {isFinished && (
-              <button 
+              <button
                 onClick={resetProcess}
                 className="w-full mt-3 py-3 rounded-md border-2 border-primary text-primary hover:bg-primary/10 font-bold flex justify-center items-center gap-2 transition-colors animate-in fade-in"
               >
-                <RefreshCw className="w-4 h-4" /> 
+                <RefreshCw className="w-4 h-4" />
                 NUEVA CARGA (REINICIAR)
               </button>
             )}
@@ -408,7 +450,7 @@ export default function BulkGeneration() {
 
           {/* Panel Derecho: Lista de Registros y Progreso */}
           <div className="lg:col-span-2 space-y-4 flex flex-col">
-            
+
             {/* Resumen */}
             <div className="grid grid-cols-4 gap-4">
               <div className="p-3 rounded-md bg-secondary/50 border border-border text-center">
@@ -433,13 +475,52 @@ export default function BulkGeneration() {
             {isFinished && (
               <div className={`p-4 rounded-lg border ${conErrores === 0 ? 'bg-green-500/10 border-green-500/30 text-green-600' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-600'}`}>
                 <h3 className="font-bold flex items-center gap-2">
-                  {conErrores === 0 ? <CheckCircle className="w-5 h-5"/> : <AlertCircle className="w-5 h-5"/>}
+                  {conErrores === 0 ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                   Resumen de la Operación
                 </h3>
                 <p className="text-sm mt-1">
-                  Se generaron {exitosos} contratos correctamente. 
+                  Se generaron {exitosos} contratos correctamente.
                   {conErrores > 0 ? ` Hubo ${conErrores} registros ignorados por errores en los datos que deberás revisar manualmente.` : ` ¡Todos los registros pasaron las validaciones perfectamente!`}
                 </p>
+              </div>
+            )}
+
+            {/* Reporte de errores de formato de fecha */}
+            {filasConErrorDeFecha.length > 0 && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 overflow-hidden">
+                <div className="px-4 py-3 border-b border-red-500/20 bg-red-500/10 flex items-center gap-2 font-bold text-sm text-red-600">
+                  <AlertCircle className="w-4 h-4" />
+                  Errores de formato de fecha ({totalErroresDeFecha}) — {filasConErrorDeFecha.length} contrato(s) bloqueado(s)
+                </div>
+                <div className="max-h-72 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-red-500/5 text-left text-red-700/80 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 font-bold">Fila</th>
+                        <th className="px-3 py-2 font-bold">Camper / Pagaré</th>
+                        <th className="px-3 py-2 font-bold">Campo</th>
+                        <th className="px-3 py-2 font-bold">Valor encontrado</th>
+                        <th className="px-3 py-2 font-bold">Detalle</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filasConErrorDeFecha.flatMap(({ r, i }) =>
+                        (r.dateErrors ?? []).map((de, j) => (
+                          <tr key={`${i}-${j}`} className="border-t border-red-500/10 align-top">
+                            <td className="px-3 py-2 font-semibold whitespace-nowrap">{r.camper.filaExcel ?? "-"}</td>
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-foreground">{r.camper.nombreCamper || "Sin Nombre"}</div>
+                              <div className="text-muted-foreground">{r.camper.pagare ? `Pagaré ${r.camper.pagare}` : "Sin Pagaré"}</div>
+                            </td>
+                            <td className="px-3 py-2 font-medium whitespace-nowrap">{de.campo}</td>
+                            <td className="px-3 py-2 font-mono text-red-600 whitespace-nowrap">{de.valor}</td>
+                            <td className="px-3 py-2 text-foreground/80">{de.mensaje}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -450,30 +531,30 @@ export default function BulkGeneration() {
               </div>
               <div className="overflow-y-auto p-2 space-y-2 flex-1">
                 {results.length === 0 && <div className="p-4 text-center text-muted-foreground text-sm">Sube un archivo Excel para ver el desglose.</div>}
-                
+
                 {results.map((r, i) => (
                   <div key={i} className={`p-3 rounded-md border text-sm flex flex-col gap-1
-                    ${r.status === 'error' ? 'bg-red-500/5 border-red-500/20' : 
-                      r.status === 'success' ? 'bg-green-500/5 border-green-500/20' : 
-                      'bg-background border-border'}
+                    ${r.status === 'error' ? 'bg-red-500/5 border-red-500/20' :
+                      r.status === 'success' ? 'bg-green-500/5 border-green-500/20' :
+                        'bg-background border-border'}
                   `}>
                     <div className="flex justify-between items-center font-semibold">
-                      <span>{i+1}. {r.camper.nombreCamper || "Sin Nombre"} <span className="text-muted-foreground font-normal text-xs ml-2">({r.camper.documentoCamper || "Sin Doc"}) - {r.camper.pagare ? `Pagaré: ${r.camper.pagare}` : "Sin Pagaré"}</span></span>
-                      
+                      <span>Fila {r.camper.filaExcel ?? i + 2}. {r.camper.nombreCamper || "Sin Nombre"} <span className="text-muted-foreground font-normal text-xs ml-2">({r.camper.documentoCamper || "Sin Doc"}) - {r.camper.pagare ? `Pagaré: ${r.camper.pagare}` : "Sin Pagaré"}</span></span>
+
                       {r.status === 'error' && (
                         <div className="relative">
-                          <button 
+                          <button
                             onClick={() => setActivePopover(activePopover === i ? null : i)}
                             className="text-red-500 text-xs flex items-center gap-1 hover:bg-red-500/10 px-2 py-1 rounded cursor-pointer transition-colors"
                           >
-                            <AlertCircle className="w-3 h-3"/> ERROR
+                            <AlertCircle className="w-3 h-3" /> ERROR
                           </button>
                           {activePopover === i && (
                             <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-card text-foreground border border-border shadow-2xl rounded-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                               <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 flex justify-between items-center">
                                 <span className="font-bold text-red-600 flex items-center gap-2 text-sm">
-                                  <AlertCircle className="w-4 h-4" /> 
-                                  Datos requeridos:
+                                  <AlertCircle className="w-4 h-4" />
+                                  Errores de validación:
                                 </span>
                                 <button onClick={() => setActivePopover(null)} className="text-red-500/60 hover:text-red-600 transition-colors p-1 hover:bg-red-500/10 rounded-md">✕</button>
                               </div>
@@ -497,12 +578,16 @@ export default function BulkGeneration() {
                           )}
                         </div>
                       )}
-                      {r.status === 'success' && <span className="text-green-500 text-xs flex items-center gap-1"><CheckCircle className="w-3 h-3"/> ÉXITO</span>}
+                      {r.status === 'success' && <span className="text-green-500 text-xs flex items-center gap-1"><CheckCircle className="w-3 h-3" /> ÉXITO</span>}
                       {r.status === 'pending' && <span className="text-muted-foreground text-xs">Pendiente</span>}
                     </div>
-                    
+
                     {r.status === 'error' && (
-                      <p className="text-red-600/80 text-xs font-medium mt-1">Datos faltantes</p>
+                      <p className="text-red-600/80 text-xs font-medium mt-1">
+                        {(r.dateErrors?.length ?? 0) > 0
+                          ? `Fecha con formato inválido en: ${r.dateErrors!.map(d => d.campo).join(", ")}. Formato obligatorio: ${OFFICIAL_DATE_FORMAT}.`
+                          : "Datos faltantes o inválidos"}
+                      </p>
                     )}
                     {r.status === 'success' && (
                       <p className="text-green-600/80 text-xs font-medium mt-1">Archivo subido a Google Drive.</p>
