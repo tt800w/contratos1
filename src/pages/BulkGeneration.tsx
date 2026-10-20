@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Folder, Play, CheckCircle, AlertCircle, FileSpreadsheet, Download, RefreshCw, ArrowLeft } from "lucide-react";
+import { Upload, Folder, Play, CheckCircle, AlertCircle, FileSpreadsheet, Download, RefreshCw, ArrowLeft, Wrench, Sparkles, X, Check, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
@@ -7,7 +7,7 @@ import { parseExcel, CamperData } from "@/utils/excelParser";
 import { ensureFolder, uploadFileToDrive } from "@/utils/googleDriveService";
 import { prepareUnifiedData, generateContract, getContractFileName } from "@/utils/contractGenerator";
 import { parseCurrency } from "@/utils/numberToWords";
-import { isOfficialDate, getDateFormatErrorMessage, OFFICIAL_DATE_FORMAT, OFFICIAL_DATE_EXAMPLE } from "@/utils/dateFormat";
+import { isOfficialDate, getDateFormatErrorMessage, OFFICIAL_DATE_FORMAT, OFFICIAL_DATE_EXAMPLE, tryAutoFixDate } from "@/utils/dateFormat";
 import * as xlsx from "xlsx";
 
 interface DateFieldError {
@@ -46,6 +46,10 @@ export default function BulkGeneration() {
   const [_logs, setLogs] = useState<{ type: 'success' | 'error' | 'info'; message: string }[]>([]);
   const [activePopover, setActivePopover] = useState<number | null>(null);
 
+  // Estado para la sección de Corrección de Errores
+  const [isCorrectionOpen, setIsCorrectionOpen] = useState(false);
+  const [draftCampers, setDraftCampers] = useState<Record<number, CamperData>>({});
+
   const resetProcess = () => {
     setFile(null);
     setData([]);
@@ -55,6 +59,160 @@ export default function BulkGeneration() {
     setProgress(0);
     setLogs([]);
     setActivePopover(null);
+    setIsCorrectionOpen(false);
+    setDraftCampers({});
+  };
+
+  const openCorrectionModal = () => {
+    const draft: Record<number, CamperData> = {};
+    results.forEach((r, idx) => {
+      if (r.status === 'error') {
+        draft[idx] = JSON.parse(JSON.stringify(r.camper));
+      }
+    });
+    setDraftCampers(draft);
+    setIsCorrectionOpen(true);
+  };
+
+  const closeCorrectionModal = () => {
+    setIsCorrectionOpen(false);
+  };
+
+  const updateDraftField = (recordIdx: number, field: keyof CamperData, value: any) => {
+    setDraftCampers(prev => ({
+      ...prev,
+      [recordIdx]: {
+        ...prev[recordIdx],
+        [field]: value
+      }
+    }));
+  };
+
+  const updateDraftCuota = (recordIdx: number, cuotaIdx: number, field: 'fecha' | 'valor', value: any) => {
+    setDraftCampers(prev => {
+      const camper = prev[recordIdx];
+      if (!camper) return prev;
+      const cuotas = [...(camper.cuotasDetalle || [])];
+      while (cuotas.length <= cuotaIdx) {
+        cuotas.push({ valor: 0, fecha: "" });
+      }
+      cuotas[cuotaIdx] = {
+        ...cuotas[cuotaIdx],
+        [field]: field === 'valor' ? (Number(value) || 0) : value
+      };
+      return {
+        ...prev,
+        [recordIdx]: {
+          ...camper,
+          cuotasDetalle: cuotas
+        }
+      };
+    });
+  };
+
+  const autoFixSingleDate = (recordIdx: number, field: 'fechaContrato' | number) => {
+    setDraftCampers(prev => {
+      const camper = { ...prev[recordIdx] };
+      if (!camper) return prev;
+      if (field === 'fechaContrato') {
+        if (camper.fechaContrato) {
+          camper.fechaContrato = tryAutoFixDate(camper.fechaContrato);
+        }
+      } else {
+        const cuotas = [...(camper.cuotasDetalle || [])];
+        if (cuotas[field] && cuotas[field].fecha) {
+          cuotas[field] = {
+            ...cuotas[field],
+            fecha: tryAutoFixDate(cuotas[field].fecha)
+          };
+        }
+        camper.cuotasDetalle = cuotas;
+      }
+      return {
+        ...prev,
+        [recordIdx]: camper
+      };
+    });
+  };
+
+  const autoFixCamperDates = (recordIdx: number) => {
+    setDraftCampers(prev => {
+      const camper = { ...prev[recordIdx] };
+      if (!camper) return prev;
+      if (camper.fechaContrato) {
+        camper.fechaContrato = tryAutoFixDate(camper.fechaContrato);
+      }
+      if (camper.cuotasDetalle) {
+        camper.cuotasDetalle = camper.cuotasDetalle.map(cd => ({
+          ...cd,
+          fecha: cd.fecha ? tryAutoFixDate(cd.fecha) : cd.fecha
+        }));
+      }
+      return {
+        ...prev,
+        [recordIdx]: camper
+      };
+    });
+    toast.success("Fechas corregidas para este registro.");
+  };
+
+  const autoFixAllDates = () => {
+    let countFixed = 0;
+    setDraftCampers(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(key => {
+        const idx = Number(key);
+        const camper = { ...updated[idx] };
+        if (camper.fechaContrato) {
+          const fixed = tryAutoFixDate(camper.fechaContrato);
+          if (fixed !== camper.fechaContrato) {
+            camper.fechaContrato = fixed;
+            countFixed++;
+          }
+        }
+        if (camper.cuotasDetalle) {
+          camper.cuotasDetalle = camper.cuotasDetalle.map(cd => {
+            if (cd.fecha) {
+              const fixed = tryAutoFixDate(cd.fecha);
+              if (fixed !== cd.fecha) {
+                countFixed++;
+                return { ...cd, fecha: fixed };
+              }
+            }
+            return cd;
+          });
+        }
+        updated[idx] = camper;
+      });
+      return updated;
+    });
+    toast.success(`Se auto-corrigieron las fechas detectadas (${countFixed} cambios aplicados).`);
+  };
+
+  const handleSaveCorrections = () => {
+    const updatedAllCampers: CamperData[] = results.map((r, idx) => {
+      return draftCampers[idx] !== undefined ? draftCampers[idx] : r.camper;
+    });
+
+    const newResults = validateData(updatedAllCampers);
+    setData(updatedAllCampers);
+    setResults(newResults);
+
+    const remainingErrors = newResults.filter(r => r.status === 'error').length;
+    if (remainingErrors === 0) {
+      toast.success("¡Todos los errores fueron corregidos exitosamente! Ya puedes generar los contratos.");
+      setIsCorrectionOpen(false);
+      setDraftCampers({});
+    } else {
+      const newDraft: Record<number, CamperData> = {};
+      newResults.forEach((r, idx) => {
+        if (r.status === 'error') {
+          newDraft[idx] = JSON.parse(JSON.stringify(r.camper));
+        }
+      });
+      setDraftCampers(newDraft);
+      toast.warning(`Se actualizaron los registros. Aún quedan ${remainingErrors} contrato(s) con errores por subsanar.`);
+    }
   };
 
   const login = useGoogleLogin({
@@ -232,6 +390,8 @@ export default function BulkGeneration() {
     setIsFinished(false);
     setProgress(0);
     setLogs([]);
+    setIsCorrectionOpen(false);
+    setDraftCampers({});
 
     try {
       const parsedData = await parseExcel(selectedFile);
@@ -459,6 +619,32 @@ export default function BulkGeneration() {
                 NUEVA CARGA (REINICIAR)
               </button>
             )}
+
+            {/* Botón de Corrección de Errores (ubicado en el área estratégica señalada por el usuario) */}
+            <div className="pt-2">
+              <button
+                onClick={openCorrectionModal}
+                disabled={conErrores === 0 || isProcessing}
+                className={`w-full py-3.5 px-4 rounded-lg font-bold text-sm flex justify-center items-center gap-2.5 transition-all shadow-sm ${
+                  conErrores > 0
+                    ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-2 border-amber-500/50 hover:border-amber-400 cursor-pointer shadow-amber-500/10 hover:shadow-amber-500/20 animate-pulse"
+                    : "bg-secondary/40 border border-border/60 text-muted-foreground opacity-40 cursor-not-allowed"
+                }`}
+                title={conErrores > 0 ? "Corregir errores de validación directamente sin volver a subir el Excel" : "No hay errores para corregir"}
+              >
+                <Wrench className="w-4 h-4" />
+                CORRECCIÓN DE ERRORES {conErrores > 0 && (
+                  <span className="bg-amber-500 text-black font-extrabold text-xs px-2 py-0.5 rounded-full ml-1">
+                    {conErrores}
+                  </span>
+                )}
+              </button>
+              {conErrores > 0 && (
+                <p className="text-[11px] text-amber-400/90 text-center mt-1.5">
+                  Corrige datos o formatos de fecha directamente aquí.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Panel Derecho: Lista de Registros y Progreso */}
@@ -501,9 +687,17 @@ export default function BulkGeneration() {
             {/* Reporte de errores de formato de fecha */}
             {filasConErrorDeFecha.length > 0 && (
               <div className="rounded-xl border border-red-500/30 bg-red-500/5 overflow-hidden">
-                <div className="px-4 py-3 border-b border-red-500/20 bg-red-500/10 flex items-center gap-2 font-bold text-sm text-red-600">
-                  <AlertCircle className="w-4 h-4" />
-                  Errores de formato de fecha ({totalErroresDeFecha}) — {filasConErrorDeFecha.length} contrato(s) bloqueado(s)
+                <div className="px-4 py-3 border-b border-red-500/20 bg-red-500/10 flex items-center justify-between font-bold text-sm text-red-600">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Errores de formato de fecha ({totalErroresDeFecha}) — {filasConErrorDeFecha.length} contrato(s) bloqueado(s)</span>
+                  </div>
+                  <button
+                    onClick={openCorrectionModal}
+                    className="text-xs font-semibold px-3 py-1 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Wrench className="w-3.5 h-3.5" /> Corregir ahora
+                  </button>
                 </div>
                 <div className="max-h-72 overflow-y-auto relative">
                   <table className="w-full text-xs border-separate border-spacing-0">
@@ -613,6 +807,356 @@ export default function BulkGeneration() {
           </div>
         </div>
       </div>
+
+      {/* Modal / Sección de Corrección Manual de Errores */}
+      {isCorrectionOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            
+            {/* Cabecera del Modal */}
+            <div className="px-6 py-4 border-b border-border bg-secondary/40 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    Corrección Manual de Errores
+                    <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold">
+                      {Object.keys(draftCampers).length} registro(s) con novedades
+                    </span>
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Modifica los campos erróneos directamente aquí sin necesidad de rehacer ni volver a subir el Excel.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={autoFixAllDates}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  title="Convierte automáticamente formatos como M/D/YY a DD/MM/AAAA en todos los registros"
+                >
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Auto-corregir todas las fechas
+                </button>
+                <button
+                  type="button"
+                  onClick={closeCorrectionModal}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+                  title="Cerrar ventana"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cuerpo del Modal con scroll */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background/50">
+              {Object.keys(draftCampers).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground space-y-2">
+                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+                  <p className="font-semibold text-foreground">¡No hay registros con errores pendientes!</p>
+                  <p className="text-xs">Todos los registros pasaron las validaciones correctamente.</p>
+                </div>
+              ) : (
+                Object.keys(draftCampers).map((key) => {
+                  const recordIdx = Number(key);
+                  const camper = draftCampers[recordIdx];
+                  if (!camper) return null;
+                  const originalResult = results[recordIdx];
+                  const isFcValid = isOfficialDate(camper.fechaContrato);
+                  const sumCuotas = (camper.cuotasDetalle || []).reduce((acc, c) => acc + (c.valor || 0), 0);
+                  const targetVal = parseCurrency(camper.valorTotalObjetivo);
+                  const cuotasCoinciden = targetVal > 0 && sumCuotas === targetVal;
+
+                  return (
+                    <div
+                      key={recordIdx}
+                      className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4 transition-all"
+                    >
+                      {/* Barra superior de la tarjeta del camper */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-foreground">
+                              Fila {camper.filaExcel ?? recordIdx + 2}: {camper.nombreCamper || "Sin Nombre"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ({camper.tipoDocumentoCamper || "TI"} {camper.documentoCamper || "Sin Doc"})
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Pagaré: <span className="font-mono text-foreground font-semibold">{camper.pagare || "Pendiente"}</span> | Jornada: {camper.jornada || "diurna"}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => autoFixCamperDates(recordIdx)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Auto-corregir fechas de este registro"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Auto-corregir fechas de este camper
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Novedades / Errores reportados originalmente */}
+                      {originalResult?.errors && originalResult.errors.length > 0 && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs space-y-1">
+                          <div className="font-bold text-red-500 flex items-center gap-1.5 mb-1">
+                            <AlertCircle className="w-4 h-4" /> Novedades detectadas:
+                          </div>
+                          <ul className="list-disc list-inside space-y-0.5 text-red-300/90 pl-1">
+                            {originalResult.errors.map((err, eIdx) => (
+                              <li key={eIdx}>{err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Campos editables del Camper */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Nombre Completo Camper</label>
+                          <input
+                            type="text"
+                            value={camper.nombreCamper || ""}
+                            onChange={e => updateDraftField(recordIdx, 'nombreCamper', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Tipo de Documento</label>
+                          <select
+                            value={camper.tipoDocumentoCamper || "TI"}
+                            onChange={e => updateDraftField(recordIdx, 'tipoDocumentoCamper', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          >
+                            <option value="CC">Cédula de Ciudadanía (CC)</option>
+                            <option value="TI">Tarjeta de Identidad (TI)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Documento Camper</label>
+                          <input
+                            type="text"
+                            value={camper.documentoCamper || ""}
+                            onChange={e => updateDraftField(recordIdx, 'documentoCamper', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Número de Pagaré</label>
+                          <input
+                            type="text"
+                            value={camper.pagare || ""}
+                            onChange={e => updateDraftField(recordIdx, 'pagare', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Segunda fila: Fecha Contrato y Valores */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">
+                            Fecha Contrato <span className="text-primary font-mono">({OFFICIAL_DATE_FORMAT})</span>
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                placeholder={OFFICIAL_DATE_EXAMPLE}
+                                value={camper.fechaContrato || ""}
+                                onChange={e => updateDraftField(recordIdx, 'fechaContrato', e.target.value)}
+                                className={`w-full p-2 pr-16 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
+                                  isFcValid ? "border-green-500/50" : "border-red-500/60"
+                                }`}
+                              />
+                              <span className="absolute right-2 top-2 text-[10px] font-bold">
+                                {isFcValid ? (
+                                  <span className="text-green-500">✓ VÁLIDA</span>
+                                ) : (
+                                  <span className="text-red-400">✕ FORMATO</span>
+                                )}
+                              </span>
+                            </div>
+                            {!isFcValid && (
+                              <button
+                                type="button"
+                                onClick={() => autoFixSingleDate(recordIdx, 'fechaContrato')}
+                                title="Auto-corregir esta fecha"
+                                className="p-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 flex items-center gap-1"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Valor Total Objetivo ($)</label>
+                          <input
+                            type="text"
+                            value={camper.valorTotalObjetivo || ""}
+                            onChange={e => updateDraftField(recordIdx, 'valorTotalObjetivo', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-muted-foreground block mb-1">Valor Formación ($)</label>
+                          <input
+                            type="text"
+                            value={camper.valorFormacion || ""}
+                            onChange={e => updateDraftField(recordIdx, 'valorFormacion', e.target.value)}
+                            className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Si es TI, campos de acudiente */}
+                      {(camper.tipoDocumentoCamper || "TI").toUpperCase() === "TI" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs p-3 rounded-lg bg-secondary/30 border border-border">
+                          <div>
+                            <label className="font-semibold text-muted-foreground block mb-1">Nombre Acudiente (Requerido para TI)</label>
+                            <input
+                              type="text"
+                              value={camper.nombreRepresentante || ""}
+                              onChange={e => updateDraftField(recordIdx, 'nombreRepresentante', e.target.value)}
+                              className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-muted-foreground block mb-1">Documento Acudiente (Requerido para TI)</label>
+                            <input
+                              type="text"
+                              value={camper.cedulaRepresentante || ""}
+                              onChange={e => updateDraftField(recordIdx, 'cedulaRepresentante', e.target.value)}
+                              className="w-full p-2 rounded-md border border-input bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Cuotas Detalladas */}
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-primary" />
+                            Fechas y Valores de Cuotas ({camper.cuotasDetalle?.length || 0})
+                          </span>
+                          <span className={`text-[11px] px-2.5 py-0.5 rounded-full border font-semibold ${
+                            cuotasCoinciden
+                              ? "bg-green-500/10 text-green-400 border-green-500/30"
+                              : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                          }`}>
+                            Suma Cuotas: ${sumCuotas.toLocaleString()} / Objetivo: ${targetVal.toLocaleString()} {cuotasCoinciden ? "✓" : "≠"}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {(camper.cuotasDetalle || []).map((cuota, cIdx) => {
+                            const isCDateValid = isOfficialDate(cuota.fecha);
+                            return (
+                              <div
+                                key={cIdx}
+                                className={`p-2.5 rounded-lg border text-xs space-y-1.5 transition-all ${
+                                  isCDateValid ? "bg-secondary/20 border-border" : "bg-red-500/5 border-red-500/30"
+                                }`}
+                              >
+                                <div className="flex justify-between items-center font-bold">
+                                  <span>Cuota {cIdx + 1}</span>
+                                  {isCDateValid ? (
+                                    <span className="text-green-500 text-[10px] font-semibold">✓ Válida</span>
+                                  ) : (
+                                    <span className="text-red-400 text-[10px] font-semibold">✕ Formato</span>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block mb-0.5">Fecha ({OFFICIAL_DATE_FORMAT})</label>
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      placeholder={OFFICIAL_DATE_EXAMPLE}
+                                      value={cuota.fecha || ""}
+                                      onChange={e => updateDraftCuota(recordIdx, cIdx, 'fecha', e.target.value)}
+                                      className={`w-full p-1.5 text-xs rounded border bg-background font-mono ${
+                                        isCDateValid ? "border-input" : "border-red-500/60 focus:border-red-500"
+                                      }`}
+                                    />
+                                    {!isCDateValid && (
+                                      <button
+                                        type="button"
+                                        onClick={() => autoFixSingleDate(recordIdx, cIdx)}
+                                        title="Auto-corregir formato"
+                                        className="p-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+                                      >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block mb-0.5">Valor ($)</label>
+                                  <input
+                                    type="number"
+                                    value={cuota.valor || ""}
+                                    onChange={e => updateDraftCuota(recordIdx, cIdx, 'valor', e.target.value)}
+                                    className="w-full p-1.5 text-xs rounded border border-input bg-background font-mono"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Pie del Modal con Guardar y Cancelar */}
+            <div className="px-6 py-4 border-t border-border bg-secondary/40 flex items-center justify-between gap-3">
+              <span className="text-xs text-muted-foreground">
+                Al guardar, los datos se revalidan inmediatamente y los contratos quedarán listos para generar.
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={closeCorrectionModal}
+                  className="px-4 py-2 text-xs font-semibold rounded-md border border-border hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCorrections}
+                  className="px-5 py-2 text-xs font-bold rounded-md bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <Check className="w-4 h-4" />
+                  GUARDAR CAMBIOS Y REVALIDAR
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

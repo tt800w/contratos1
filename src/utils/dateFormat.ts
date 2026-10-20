@@ -70,3 +70,80 @@ export const getTodayDateParts = (): DateParts => {
 /** Mensaje estándar para una fecha que no cumple el formato oficial. */
 export const getDateFormatErrorMessage = (foundValue: string): string =>
     `Error en el formato de fecha: "${foundValue}". El formato obligatorio y establecido es ${OFFICIAL_DATE_FORMAT} (ej: ${OFFICIAL_DATE_EXAMPLE}).`;
+
+/**
+ * Intenta normalizar o corregir una cadena de fecha que tenga errores comunes
+ * de formato (ej: M/D/YY, MM/DD/YYYY, AAAA-MM-DD, D/M/AAAA) convirtiéndola
+ * al formato estándar DD/MM/AAAA.
+ * Si ya es válida en DD/MM/AAAA, la devuelve formateada (DD/MM/AAAA).
+ * Si no se puede interpretar, devuelve la cadena original sin alterar.
+ */
+export const tryAutoFixDate = (value: string | null | undefined): string => {
+    if (!value) return "";
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    // 1. Si ya es una fecha oficial válida (DD/MM/AAAA o AAAA-MM-DD)
+    const valid = parseOfficialDate(trimmed);
+    if (valid) {
+        const dd = String(valid.day).padStart(2, "0");
+        const mm = String(valid.month).padStart(2, "0");
+        const aaaa = String(valid.year).padStart(4, "0");
+        return `${dd}/${mm}/${aaaa}`;
+    }
+
+    // 2. Patrones con separadores /, - o .
+    const parts = trimmed.split(/[\/\-\.]+/).map((p) => p.trim());
+    if (parts.length === 3) {
+        let p1 = Number(parts[0]);
+        let p2 = Number(parts[1]);
+        let p3 = Number(parts[2]);
+
+        if (!isNaN(p1) && !isNaN(p2) && !isNaN(p3)) {
+            // Caso año de 2 dígitos al final (ej. 10/16/26 o 16/10/26)
+            if (p3 >= 0 && p3 <= 99 && parts[2].length <= 2) {
+                p3 = 2000 + p3;
+            }
+
+            let day = 0;
+            let month = 0;
+            let year = 0;
+
+            if (p1 >= 1900 && p1 <= 2100) {
+                // Formato YYYY-MM-DD o YYYY-DD-MM
+                year = p1;
+                if (p2 > 12 && p3 <= 12) {
+                    day = p2;
+                    month = p3;
+                } else {
+                    month = p2;
+                    day = p3;
+                }
+            } else if (p3 >= 1900 && p3 <= 2100) {
+                year = p3;
+                // Si p1 > 12 y p2 <= 12 -> DD/MM
+                if (p1 > 12 && p2 <= 12) {
+                    day = p1;
+                    month = p2;
+                } else if (p2 > 12 && p1 <= 12) {
+                    // Formato estadounidense M/D/YY común en Excel (ej 10/16/26 -> mes 10, día 16)
+                    day = p2;
+                    month = p1;
+                } else {
+                    // Ambos <= 12: en contexto Excel colombiano suele ser DD/MM
+                    day = p1;
+                    month = p2;
+                }
+            }
+
+            if (year >= 1900 && month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(year, month)) {
+                const dd = String(day).padStart(2, "0");
+                const mm = String(month).padStart(2, "0");
+                const aaaa = String(year).padStart(4, "0");
+                return `${dd}/${mm}/${aaaa}`;
+            }
+        }
+    }
+
+    return trimmed;
+};
