@@ -492,29 +492,29 @@ export default function BulkGeneration() {
                   <AlertCircle className="w-4 h-4" />
                   Errores de formato de fecha ({totalErroresDeFecha}) — {filasConErrorDeFecha.length} contrato(s) bloqueado(s)
                 </div>
-                <div className="max-h-72 overflow-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-red-500/5 text-left text-red-700/80 uppercase sticky top-0">
+                <div className="max-h-72 overflow-y-auto relative">
+                  <table className="w-full text-xs border-separate border-spacing-0">
+                    <thead>
                       <tr>
-                        <th className="px-3 py-2 font-bold">Fila</th>
-                        <th className="px-3 py-2 font-bold">Camper / Pagaré</th>
-                        <th className="px-3 py-2 font-bold">Campo</th>
-                        <th className="px-3 py-2 font-bold">Valor encontrado</th>
-                        <th className="px-3 py-2 font-bold">Detalle</th>
+                        <th className="sticky top-0 z-20 bg-[#1e0e14] text-red-300 font-bold px-3 py-2.5 text-left border-b border-red-500/30 whitespace-nowrap shadow-sm uppercase tracking-wider">Fila</th>
+                        <th className="sticky top-0 z-20 bg-[#1e0e14] text-red-300 font-bold px-3 py-2.5 text-left border-b border-red-500/30 whitespace-nowrap shadow-sm uppercase tracking-wider">Camper / Pagaré</th>
+                        <th className="sticky top-0 z-20 bg-[#1e0e14] text-red-300 font-bold px-3 py-2.5 text-left border-b border-red-500/30 whitespace-nowrap shadow-sm uppercase tracking-wider">Campo</th>
+                        <th className="sticky top-0 z-20 bg-[#1e0e14] text-red-300 font-bold px-3 py-2.5 text-left border-b border-red-500/30 whitespace-nowrap shadow-sm uppercase tracking-wider">Valor encontrado</th>
+                        <th className="sticky top-0 z-20 bg-[#1e0e14] text-red-300 font-bold px-3 py-2.5 text-left border-b border-red-500/30 shadow-sm uppercase tracking-wider">Detalle</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filasConErrorDeFecha.flatMap(({ r, i }) =>
                         (r.dateErrors ?? []).map((de, j) => (
-                          <tr key={`${i}-${j}`} className="border-t border-red-500/10 align-top">
-                            <td className="px-3 py-2 font-semibold whitespace-nowrap">{r.camper.filaExcel ?? "-"}</td>
-                            <td className="px-3 py-2">
+                          <tr key={`${i}-${j}`} className="hover:bg-red-500/5 transition-colors align-top">
+                            <td className="px-3 py-2 font-semibold whitespace-nowrap border-b border-red-500/10">{r.camper.filaExcel ?? "-"}</td>
+                            <td className="px-3 py-2 border-b border-red-500/10">
                               <div className="font-medium text-foreground">{r.camper.nombreCamper || "Sin Nombre"}</div>
                               <div className="text-muted-foreground">{r.camper.pagare ? `Pagaré ${r.camper.pagare}` : "Sin Pagaré"}</div>
                             </td>
-                            <td className="px-3 py-2 font-medium whitespace-nowrap">{de.campo}</td>
-                            <td className="px-3 py-2 font-mono text-red-600 whitespace-nowrap">{de.valor}</td>
-                            <td className="px-3 py-2 text-foreground/80">{de.mensaje}</td>
+                            <td className="px-3 py-2 font-medium whitespace-nowrap border-b border-red-500/10">{de.campo}</td>
+                            <td className="px-3 py-2 font-mono text-red-400 whitespace-nowrap border-b border-red-500/10">{de.valor}</td>
+                            <td className="px-3 py-2 text-foreground/80 border-b border-red-500/10">{de.mensaje}</td>
                           </tr>
                         ))
                       )}
