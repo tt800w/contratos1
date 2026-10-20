@@ -13,6 +13,7 @@ export interface UnifiedContractData {
 }
 
 import { formatCurrencySpanish, numberToSpanishWords, parseCurrency } from './numberToWords';
+import { parseOfficialDate, getTodayDateParts, getDateFormatErrorMessage, DateParts } from './dateFormat';
 
 const runDocumentQualityPass = (zip: PizZip) => {
     const documentXml = zip.file("word/document.xml")?.asText();
@@ -41,7 +42,7 @@ const runDocumentQualityPass = (zip: PizZip) => {
 
     let lastWasPageBreak = false;
     let inNotificacionesClause = false;
-    
+
     xml = xml.replace(/<w:p[\s\S]*?<\/w:p>/g, (p) => {
         const text = getWordParagraphText(p);
         const hasNativePageBreak = /<w:br\b[^>]*w:type="page"[^>]*\/>/g.test(p) || /<w:pageBreakBefore\b/.test(p);
@@ -80,25 +81,32 @@ const runDocumentQualityPass = (zip: PizZip) => {
 };
 
 export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
-    let fechaObj = new Date();
+    // Validación estricta: solo se acepta el formato oficial AAAA-MM-DD (ver utils/dateFormat.ts).
+    // No se intenta adivinar ni convertir otros formatos; si llega uno distinto se bloquea la generación.
+    let partesFecha: DateParts;
     if (extraData.fechaContrato) {
-        // Tratar de parsear DD/MM/YYYY o YYYY-MM-DD
-        const parts = extraData.fechaContrato.includes('/') ? extraData.fechaContrato.split('/') : extraData.fechaContrato.split('-');
-        if (parts.length === 3) {
-            if (parts[0].length === 4) {
-                // Formato YYYY-MM-DD
-                fechaObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            } else {
-                // Formato DD/MM/YYYY
-                fechaObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-            }
+        const parsed = parseOfficialDate(extraData.fechaContrato);
+        if (!parsed) {
+            throw new Error(`Fecha Contrato: ${getDateFormatErrorMessage(extraData.fechaContrato)}`);
         }
+        partesFecha = parsed;
+    } else {
+        // Comportamiento existente de los formularios individuales: sin fecha => fecha de hoy.
+        partesFecha = getTodayDateParts();
     }
 
-    const dia = fechaObj.getDate().toString();
+    if (Array.isArray(extraData.fechasCuotas)) {
+        extraData.fechasCuotas.forEach((fecha: string, index: number) => {
+            if (fecha && !parseOfficialDate(fecha)) {
+                throw new Error(`Fecha Cuota ${index + 1}: ${getDateFormatErrorMessage(fecha)}`);
+            }
+        });
+    }
+
+    const dia = partesFecha.day.toString();
     const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const mes = meses[fechaObj.getMonth()];
-    const ano = fechaObj.getFullYear().toString();
+    const mes = meses[partesFecha.month - 1];
+    const ano = partesFecha.year.toString();
 
     const numCuotasTotal = extraData.isPP ? 1 : (parseInt(extraData.cuotas) || 1);
     const TOTAL_OBJETIVO = extraData.isPP ? 12000000 : (parseCurrency(extraData.totalObjetivo) || 13000000);
@@ -121,7 +129,6 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
             extraData.manualCuotas.forEach((valor: number, index: number) => {
                 const label = `CUOTA ${index + 1}:`;
                 const fecha = extraData.fechasCuotas?.[index];
-                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
 
                 cuotasList.push({
                     titulo: label,
@@ -138,7 +145,6 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
                 const label = `CUOTA ${i}:`;
                 const valorAUsar = (i === numCuotasTotal) ? ajusteUltimaCuota : valorCuota;
                 const fecha = extraData.fechasCuotas?.[i - 1];
-                const fechaTexto = fecha ? `con una fecha limite de pago de ${fecha} ` : "";
 
                 cuotasList.push({
                     titulo: label,
@@ -191,7 +197,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "NOMBRE DEL ACUDIENTE": !extraData.isMinor ? raw.nombreCamper : (raw.nombreRepresentante || ""),
         "NOMBRE ACUDIENTE": !extraData.isMinor ? raw.nombreCamper : (raw.nombreRepresentante || ""),
         "ACUDIENTE": !extraData.isMinor ? raw.nombreCamper : (raw.nombreRepresentante || ""),
-        
+
         "CEDULA REP DEL CAMPER": !extraData.isMinor ? raw.documentoCamper : (raw.cedulaRepresentante || ""),
         "CEDULA REPRESENTANTE": !extraData.isMinor ? raw.documentoCamper : (raw.cedulaRepresentante || ""),
         "CEDULA DEL REPRESENTANTE": !extraData.isMinor ? raw.documentoCamper : (raw.cedulaRepresentante || ""),
@@ -216,7 +222,7 @@ export const prepareUnifiedData = (raw: any, extraData: any = {}) => {
         "NUMERO ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
         "NUMERO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
         "NUMERO DE CONTACTO DEL ACUDIENTE": !extraData.isMinor ? (raw.celularCamper || raw.telefonoCamper) : (raw.telefonoRepresentante || ""),
-        
+
         "CORREO ACUDIENTE": !extraData.isMinor ? raw.emailCamper : (raw.emailRepresentante || ""),
         "CORREO DEL ACUDIENTE": !extraData.isMinor ? raw.emailCamper : (raw.emailRepresentante || ""),
         "EMAIL ACUDIENTE": !extraData.isMinor ? raw.emailCamper : (raw.emailRepresentante || ""),
@@ -288,7 +294,7 @@ export const generateContract = async (templateUrl: string, data: any, outputNam
             runDocumentQualityPass(doc.getZip());
         } catch (error: any) {
             console.error("Docxtemplater Render Error Object:", error);
-            
+
             if (error.properties && error.properties.errors) {
                 console.error("ERRORES DETALLADOS (FÁCIL DE LEER):");
                 error.properties.errors.forEach((err: any, index: number) => {
@@ -369,7 +375,7 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
     const originalTransform = element.style.transform;
     const originalTransition = element.style.transition;
     const originalVisibility = element.style.visibility;
-    
+
     // Inyectar un estilo temporal para la impresión
     const printStyle = document.createElement('style');
     printStyle.innerHTML = `
@@ -443,7 +449,7 @@ export const downloadAsPDF = async (elementId: string, outputName: string) => {
  */
 export const downloadAsNativePDF = async (docxBlob: Blob, outputName: string) => {
     const convertApiSecret = import.meta.env.VITE_CONVERTAPI_SECRET;
-    
+
     if (!convertApiSecret) {
         throw new Error("Falta la clave VITE_CONVERTAPI_SECRET en el archivo .env. Regístrate en convertapi.com y añádela.");
     }
@@ -463,10 +469,10 @@ export const downloadAsNativePDF = async (docxBlob: Blob, outputName: string) =>
         }
 
         const data = await response.json();
-        
+
         if (data && data.Files && data.Files.length > 0) {
             const base64Data = data.Files[0].FileData;
-            
+
             // Decodificar Base64 a Blob
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
@@ -475,11 +481,11 @@ export const downloadAsNativePDF = async (docxBlob: Blob, outputName: string) =>
             }
             const byteArray = new Uint8Array(byteNumbers);
             const pdfBlob = new Blob([byteArray], { type: 'application/pdf' });
-            
+
             saveAs(pdfBlob, outputName);
             return true;
         } else {
-             throw new Error("El servicio no retornó el archivo PDF.");
+            throw new Error("El servicio no retornó el archivo PDF.");
         }
     } catch (error: any) {
         console.error("Error en conversión nativa a PDF:", error);
