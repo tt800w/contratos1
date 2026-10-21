@@ -843,7 +843,7 @@ export default function BulkGeneration() {
                 <div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
                     Corrección Manual de Errores
-                    <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
                       {Object.keys(draftCampers).length} registro(s) con novedades
                     </span>
                   </h2>
@@ -929,11 +929,11 @@ export default function BulkGeneration() {
 
                       {/* Novedades / Errores reportados originalmente */}
                       {originalResult?.errors && originalResult.errors.length > 0 && (
-                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs space-y-1">
-                          <div className="font-bold text-red-500 flex items-center gap-1.5 mb-1">
-                            <AlertCircle className="w-4 h-4" /> Novedades detectadas:
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs space-y-1">
+                          <div className="font-semibold text-amber-400 flex items-center gap-1.5 mb-1">
+                            <AlertCircle className="w-4 h-4 text-amber-400" /> Novedades detectadas:
                           </div>
-                          <ul className="list-disc list-inside space-y-0.5 text-red-300/90 pl-1">
+                          <ul className="list-disc list-inside space-y-0.5 text-muted-foreground pl-1">
                             {originalResult.errors.map((err, eIdx) => (
                               <li key={eIdx}>{err}</li>
                             ))}
@@ -1205,17 +1205,17 @@ export default function BulkGeneration() {
                           {(() => {
                             const diff = sumCuotas - targetVal;
                             return (
-                              <span className={`text-[11px] px-3 py-1 rounded-full border font-bold flex items-center gap-1.5 ${
+                              <span className={`text-[11px] px-3 py-1 rounded-full border font-semibold flex items-center gap-1.5 ${
                                 cuotasCoinciden
                                   ? "bg-green-500/10 text-green-400 border-green-500/30"
-                                  : "bg-red-500/10 text-red-400 border-red-500/30 shadow-sm"
+                                  : "bg-amber-500/10 text-amber-300 dark:text-amber-400 border-amber-500/30 shadow-sm"
                               }`}>
                                 <span>Suma Cuotas: ${sumCuotas.toLocaleString()} / Objetivo: ${targetVal.toLocaleString()}</span>
                                 {cuotasCoinciden ? (
                                   <span className="text-green-400 font-bold">✓ Coincide</span>
                                 ) : (
-                                  <span className="text-red-400 font-extrabold">
-                                    ({diff > 0 ? `Excede por +$${diff.toLocaleString()}` : `Faltan -$${Math.abs(diff).toLocaleString()}`}) ✕
+                                  <span className="text-amber-300 dark:text-amber-400 font-medium">
+                                    ({diff > 0 ? `Excede por +$${diff.toLocaleString()}` : `Faltan -$${Math.abs(diff).toLocaleString()}`})
                                   </span>
                                 )}
                               </span>
