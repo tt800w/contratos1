@@ -1226,48 +1226,14 @@ export default function BulkGeneration() {
                             const isCDateValid = isOfficialDate(cuota.fecha);
                             const isValMissing = !cuota.valor || cuota.valor <= 0;
                             const isValExcessive = targetVal > 0 && cuota.valor > targetVal;
-                            const hasCuotaError = !isCDateValid || isValMissing || isValExcessive;
 
                             return (
                               <div
                                 key={cIdx}
-                                className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
-                                  hasCuotaError
-                                    ? "bg-red-500/10 border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.15)]"
-                                    : "bg-secondary/20 border-border"
-                                }`}
+                                className="p-3 rounded-xl border border-border bg-secondary/20 text-xs space-y-2 transition-all"
                               >
-                                <div className="flex justify-between items-center font-bold">
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="text-foreground">Cuota {cIdx + 1}</span>
-                                    {hasCuotaError && (
-                                      <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase">
-                                        Error
-                                      </span>
-                                    )}
-                                  </span>
-
-                                  <div className="flex items-center gap-1">
-                                    {isValExcessive && (
-                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
-                                        ✕ Supera objetivo
-                                      </span>
-                                    )}
-                                    {isValMissing && (
-                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
-                                        ✕ Sin valor
-                                      </span>
-                                    )}
-                                    {!isCDateValid ? (
-                                      <span className="text-red-400 text-[10px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded border border-red-500/40">
-                                        ✕ Formato fecha
-                                      </span>
-                                    ) : (
-                                      !isValExcessive && !isValMissing && (
-                                        <span className="text-green-500 text-[10px] font-semibold">✓ Correcta</span>
-                                      )
-                                    )}
-                                  </div>
+                                <div className="flex justify-between items-center font-semibold">
+                                  <span className="text-foreground">Cuota {cIdx + 1}</span>
                                 </div>
 
                                 <div>
