@@ -1075,15 +1075,17 @@ export default function BulkGeneration() {
                                 placeholder={OFFICIAL_DATE_EXAMPLE}
                                 value={camper.fechaContrato || ""}
                                 onChange={e => updateDraftField(recordIdx, 'fechaContrato', e.target.value)}
-                                className={`w-full p-2 pr-16 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
-                                  isFcValid ? "border-green-500/50" : "border-red-500/60"
+                                className={`w-full p-2 pr-16 rounded-md border bg-background font-mono focus:ring-1 focus:outline-none ${
+                                  isFcValid
+                                    ? "border-green-500/50 focus:ring-primary"
+                                    : "border-rose-400/70 focus:border-rose-400 focus:ring-rose-400/20"
                                 }`}
                               />
-                              <span className="absolute right-2 top-2 text-[10px] font-bold">
+                              <span className="absolute right-2 top-2 text-[10px]">
                                 {isFcValid ? (
-                                  <span className="text-green-500">✓ VÁLIDA</span>
+                                  <span className="text-green-500 font-semibold">✓ VÁLIDA</span>
                                 ) : (
-                                  <span className="text-red-400">✕ FORMATO</span>
+                                  <span className="text-rose-400 font-medium">✕ FORMATO</span>
                                 )}
                               </span>
                             </div>
@@ -1244,8 +1246,10 @@ export default function BulkGeneration() {
                                       placeholder={OFFICIAL_DATE_EXAMPLE}
                                       value={cuota.fecha || ""}
                                       onChange={e => updateDraftCuota(recordIdx, cIdx, 'fecha', e.target.value)}
-                                      className={`w-full p-1.5 text-xs rounded border bg-background font-mono ${
-                                        isCDateValid ? "border-input" : "border-red-500/60 focus:border-red-500"
+                                      className={`w-full p-1.5 text-xs rounded border bg-background font-mono focus:outline-none ${
+                                        isCDateValid
+                                          ? "border-input focus:ring-1 focus:ring-primary"
+                                          : "border-rose-400/70 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/30"
                                       }`}
                                     />
                                     {!isCDateValid && (
@@ -1259,38 +1263,36 @@ export default function BulkGeneration() {
                                       </button>
                                     )}
                                   </div>
+                                  {!isCDateValid && (
+                                    <p className="text-[10px] text-rose-400/90 font-medium mt-1 leading-tight">
+                                      Formato inválido ({OFFICIAL_DATE_FORMAT})
+                                    </p>
+                                  )}
                                 </div>
 
                                 <div>
-                                  <div className="flex justify-between items-center mb-0.5">
-                                    <label className="text-[10px] text-muted-foreground font-semibold">Valor ($)</label>
-                                    {isValExcessive && (
-                                      <span className="text-[10px] text-red-400 font-bold animate-pulse">
-                                        ¡Supera el total!
-                                      </span>
-                                    )}
-                                  </div>
+                                  <label className="text-[10px] text-muted-foreground font-semibold block mb-0.5">Valor ($)</label>
                                   <div className="relative">
                                     <span className="absolute left-2 top-1.5 text-muted-foreground text-xs">$</span>
                                     <input
                                       type="number"
                                       value={cuota.valor || ""}
                                       onChange={e => updateDraftCuota(recordIdx, cIdx, 'valor', e.target.value)}
-                                      className={`w-full p-1.5 pl-5 text-xs rounded border bg-background font-mono font-semibold ${
+                                      className={`w-full p-1.5 pl-5 text-xs rounded border bg-background font-mono font-semibold focus:outline-none ${
                                         isValExcessive || isValMissing
-                                          ? "border-red-500 text-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                          : "border-input text-foreground"
+                                          ? "border-rose-400/70 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/30 text-foreground"
+                                          : "border-input text-foreground focus:ring-1 focus:ring-primary"
                                       }`}
                                     />
                                   </div>
                                   {isValExcessive && (
-                                    <p className="text-[10px] text-red-400 font-medium mt-1 leading-tight">
-                                      ⚠️ Este valor ($<strong>{(cuota.valor || 0).toLocaleString()}</strong>) supera el objetivo ($<strong>{targetVal.toLocaleString()}</strong>).
+                                    <p className="text-[11px] text-rose-400/90 font-medium mt-1 leading-tight">
+                                      Supera el objetivo (${targetVal.toLocaleString()})
                                     </p>
                                   )}
                                   {isValMissing && (
-                                    <p className="text-[10px] text-red-400 font-medium mt-1 leading-tight">
-                                      ⚠️ Ingrese un valor mayor a $0.
+                                    <p className="text-[11px] text-rose-400/90 font-medium mt-1 leading-tight">
+                                      Debe ser mayor a $0
                                     </p>
                                   )}
                                 </div>
