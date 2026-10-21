@@ -1003,20 +1003,22 @@ export default function BulkGeneration() {
                                     placeholder="3001234567"
                                     value={camper.celularCamper || ""}
                                     onChange={e => updateDraftField(recordIdx, 'celularCamper', e.target.value)}
-                                    className={`w-full p-2 pr-24 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
-                                      celRes.isValid ? "border-green-500/50" : "border-red-500/60"
+                                    className={`w-full p-2 pr-24 rounded-md border bg-background font-mono focus:ring-1 focus:outline-none ${
+                                      celRes.isValid
+                                        ? "border-green-500/50 focus:ring-primary"
+                                        : "border-rose-400/70 focus:border-rose-400 focus:ring-rose-400/20"
                                     }`}
                                   />
-                                  <span className="absolute right-2 top-2 text-[10px] font-bold">
+                                  <span className="absolute right-2 top-2 text-[10px]">
                                     {celRes.isValid ? (
-                                      <span className="text-green-500">✓ 10 DÍGITOS</span>
+                                      <span className="text-green-500 font-semibold">✓ 10 DÍGITOS</span>
                                     ) : (
-                                      <span className="text-red-400">✕ {cleanLen}/10 DÍG</span>
+                                      <span className="text-rose-400 font-medium">✕ {cleanLen}/10 DÍG</span>
                                     )}
                                   </span>
                                 </div>
                                 {!celRes.isValid && (
-                                  <p className="text-[10px] text-red-400 mt-1 leading-tight font-medium">
+                                  <p className="text-[11px] text-rose-400/90 mt-1 leading-tight font-medium">
                                     {celRes.errorMessage}
                                   </p>
                                 )}
@@ -1153,20 +1155,27 @@ export default function BulkGeneration() {
                                       placeholder="3001234567"
                                       value={camper.telefonoRepresentante || ""}
                                       onChange={e => updateDraftField(recordIdx, 'telefonoRepresentante', e.target.value)}
-                                      className={`w-full p-2 pr-20 rounded-md border bg-background font-mono focus:ring-1 focus:ring-primary focus:outline-none ${
-                                        !camper.telefonoRepresentante || telRepRes.isValid ? "border-input" : "border-red-500/60"
+                                      className={`w-full p-2 pr-20 rounded-md border bg-background font-mono focus:ring-1 focus:outline-none ${
+                                        !camper.telefonoRepresentante || telRepRes.isValid
+                                          ? "border-input focus:ring-primary"
+                                          : "border-rose-400/70 focus:border-rose-400 focus:ring-rose-400/20"
                                       }`}
                                     />
                                     {camper.telefonoRepresentante && (
-                                      <span className="absolute right-2 top-2 text-[10px] font-bold">
+                                      <span className="absolute right-2 top-2 text-[10px]">
                                         {telRepRes.isValid ? (
-                                          <span className="text-green-500">✓ VÁLIDO</span>
+                                          <span className="text-green-500 font-semibold">✓ VÁLIDO</span>
                                         ) : (
-                                          <span className="text-red-400">✕ {cleanLen}/10 DÍG</span>
+                                          <span className="text-rose-400 font-medium">✕ {cleanLen}/10 DÍG</span>
                                         )}
                                       </span>
                                     )}
                                   </div>
+                                  {camper.telefonoRepresentante && !telRepRes.isValid && (
+                                    <p className="text-[11px] text-rose-400/90 mt-1 leading-tight font-medium">
+                                      {telRepRes.errorMessage}
+                                    </p>
+                                  )}
                                 </div>
                               );
                             })()}
