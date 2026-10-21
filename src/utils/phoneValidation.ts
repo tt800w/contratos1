@@ -42,7 +42,7 @@ export const validateColombianPhone = (value: string | number | null | undefined
         return {
             isValid: false,
             cleanDigits,
-            errorMessage: `Número celular incompleto ("${value}", ${cleanDigits.length} dígitos). En Colombia debe contener exactamente 10 dígitos (ej: 3001234567).`
+            errorMessage: "Debe contener exactamente 10 dígitos."
         };
     }
 
@@ -50,7 +50,7 @@ export const validateColombianPhone = (value: string | number | null | undefined
         return {
             isValid: false,
             cleanDigits,
-            errorMessage: `Número celular con demasiados dígitos ("${value}", ${cleanDigits.length} dígitos). En Colombia debe contener exactamente 10 dígitos.`
+            errorMessage: "Debe contener exactamente 10 dígitos."
         };
     }
 
@@ -58,7 +58,7 @@ export const validateColombianPhone = (value: string | number | null | undefined
         return {
             isValid: false,
             cleanDigits,
-            errorMessage: `Número celular inválido ("${value}"). En Colombia los números celulares deben iniciar por el número 3 (ej: 3001234567).`
+            errorMessage: "Debe iniciar con el dígito 3."
         };
     }
 

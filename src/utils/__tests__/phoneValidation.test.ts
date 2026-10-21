@@ -13,20 +13,19 @@ describe("Colombian Phone Validation", () => {
     it("rejects incomplete phone numbers (like 316486 with 6 digits)", () => {
         const result = validateColombianPhone("316486");
         expect(result.isValid).toBe(false);
-        expect(result.errorMessage).toContain("incompleto");
-        expect(result.errorMessage).toContain("6 dígitos");
+        expect(result.errorMessage).toBe("Debe contener exactamente 10 dígitos.");
     });
 
     it("rejects numbers that do not start with 3", () => {
         const result = validateColombianPhone("2001234567");
         expect(result.isValid).toBe(false);
-        expect(result.errorMessage).toContain("deben iniciar por el número 3");
+        expect(result.errorMessage).toBe("Debe iniciar con el dígito 3.");
     });
 
     it("rejects numbers with more than 10 digits", () => {
         const result = validateColombianPhone("300123456789");
         expect(result.isValid).toBe(false);
-        expect(result.errorMessage).toContain("demasiados dígitos");
+        expect(result.errorMessage).toBe("Debe contener exactamente 10 dígitos.");
     });
 
     it("rejects empty phone numbers", () => {
